@@ -5,8 +5,9 @@ import utils
 
 
 class SpinImageSituation(utils.SituationBase):
-    def __init__(self, g, image_file, spin_rate=100, rotations=2):
+    def __init__(self, g, image_file, next_situation_class, spin_rate=100, rotations=2):
         utils.SituationBase.__init__(self, g)
+        self.next_situation_class = next_situation_class
         self.FRAME_RATE = spin_rate
         self.ROTATE_INCREMENT = 5
         self.base_image = pygame.image.load(image_file).convert()
@@ -15,36 +16,65 @@ class SpinImageSituation(utils.SituationBase):
         self.background = pygame.Surface(self.g.screen.get_size()).convert()
         self.background.fill((255, 255, 255))
         self.current_angle = 0
-        self.rotations = 2
+        self.rotations_left = rotations
+        self.need_draw = True
+        self.done = False
 
-    def rot_center(image, angle):
-        """rotate a Surface, maintaining position."""
-        loc = rot_image.get_rect().center
-        rot_sprite = pygame.transform.rotate(image_orig, angle)
-        rot_image.get_rect().center = loc
-        return rot_image
-
+    def rotate_image(self):
+        self.log("Rotations Left %s, current angle: %s" % (self.rotations_left, self.current_angle))
+        if self.current_angle==0:
+            image = self.base_image
+            rect = image.get_rect()
+        else:
+            image = pygame.transform.rotate(self.base_image, self.current_angle)
+            rect = image.get_rect()
+            rect.center = self.base_center
+        return image, rect
+        
+    def handle_event(self, event):
+        if event.type == pygame.QUIT:
+            self.next_situation_class = None
+            self.done = True
+        elif event.type==pygame.KEYDOWN:
+            self.done = True
+    
     def still_running(self):
-        return True
+        return not self.done
         
     def display(self):
-        if self.rotations:
-            if self.current_angle==0:
-                image = self.base_image
-                rect = image.get_rect()
+        if self.need_draw:                        
+            self.g.screen.blit(self.background, (0, 0)) 
+            if self.rotations_left:
+                for i in range(3):
+                    image, rect = self.rotate_image()
+                    self.g.screen.blit(image, rect)   
+                    self.current_angle += 5
+                    if self.current_angle>=360:
+                        self.current_angle = 0
+                        self.rotations_left -= 1
+                        break
             else:
-                image = pygame.transform.rotate(self.base_image, self.current_angle)
-                rect = image.get_rect()
-                rect.center = self.base_center
-            self.g.screen.blit(self.background, (0, 0))        
-            self.g.screen.blit(image, rect)        
+                self.g.screen.blit(self.base_image, (0,0))
+                self.need_draw = False
             pygame.display.flip()
-    
-            self.current_angle = (self.current_angle+self.ROTATE_INCREMENT)
-            if self.current_angle > 360:
-                self.rotations -= 1
-                self.current_angle -= 360
 
+    def next_situation(self):
+        if self.next_situation_class:
+            return self.next_situation_class(self.g)
+        else:
+            return None
+
+        
+        
+class FirstNewspaperSituation(SpinImageSituation):
+    def __init__(self, g):
+        
+        SpinImageSituation.__init__(self, g, "test.png", SecondNewspaperSituation)
+        
+class SecondNewspaperSituation(SpinImageSituation):
+    def __init__(self, g):
+        SpinImageSituation.__init__(self, g, "test.png", None)
+        
         
 class InTheEndGame(utils.GameBase):
     def __init__(self):
@@ -54,7 +84,10 @@ class InTheEndGame(utils.GameBase):
 
 
     def firstSituation(self):
-        return SpinImageSituation(self, "test.png", 100)
+        utils._log("first sit")
+        sit = FirstNewspaperSituation(self)
+        utils._log(sit)
+        return sit
 
         
 

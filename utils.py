@@ -1,10 +1,11 @@
 import sys
+import time
 import pygame
 
 _verbosity = 1
 
 def _log(msg, verbosity=1):
-    if verbosity>=_verbosity:
+    if verbosity<=_verbosity:
         print msg
 
 class GameBase(object):
@@ -18,6 +19,7 @@ class GameBase(object):
         global _verbosity
         if "--debug" in sys.argv[1:]:
             _verbosity = 2
+            _log("debug enabled")
         
     def firstSituation(self):
         return None
@@ -34,27 +36,45 @@ class SituationBase(object):
         self.log("init")
     
     def log(self, msg):
-        _log("%s: %s" % (self.__class__.__name__, msg))
+        _log("%s: %s" % (self.__class__.__name__, msg), verbosity=2)
         
     def run(self):
+        start = time.time()
+        ticks = 0
         while self.still_running():
             self.g.clock.tick(self.FRAME_RATE)
-            self.handle_events()
+            ticks += 1
+            for event in pygame.event.get():
+                self.handle_event(event)
+            self.do_stuff_before_display()
             self.display()
-        return None
+            self.do_stuff_after_display()
+        actual_frame_rate = ticks/(time.time()-start)
+        self.log("Requested frame rate: %0.2f, actual frame rate: %0.2f" % (self.FRAME_RATE, actual_frame_rate))
+        return self.next_situation()
     
     def still_running(self):
-        return False
+        return True
         
-    def handle_events(self):
+    def handle_event(self, event):
         pass
     
+    def do_stuff_before_display(self):
+        pass
+        
     def display(self):
         pass
+        
+    def do_stuff_after_display(self):
+        pass
+    
+    def next_situation(self):
+        return None
 
 def main(game_class):
     gc = game_class()
     sit = gc.firstSituation()
+    _log("first sit: %s" % sit.__class__.__name__)
     while sit:
         sit = sit.run()
     gc.quit()
