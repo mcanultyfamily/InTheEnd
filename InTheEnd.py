@@ -69,18 +69,23 @@ class QuizSummarySituation(utils.SituationBase):
         self.background.fill((255, 255, 255))
         self.g.screen.blit(self.background, (0, 0)) 
         
-        self.g.render_text("This is you:", utils.GameFont("monospace", 30, (0, 0, 0)), 50, 10)        
-        y = 60
+        self.g.render_text("This is you:", utils.GameFont("monospace", 30, (0, 0, 0)), 10, 10)        
+        FONT_SIZE = 12
+        y = 50
         for q, a in self.g.quiz_answers:        
-            self.g.render_text(q, utils.GameFont("monospace", 16, (0, 0, 0)), 50, y)
-            y += 18
-            self.g.render_text(a, utils.GameFont("monospace", 16, (30,148,89)), 60, y)
-            y += 25
+            self.g.render_text(q, utils.GameFont("monospace", FONT_SIZE, (0, 0, 0)), 25, y)
+            y += FONT_SIZE+2
+            self.g.render_text(a, utils.GameFont("monospace", FONT_SIZE, (30,148,89)), 30, y)
+            y += FONT_SIZE+4
         
         self.next_button = utils.ClickableText(self.g, "Next",
                                        utils.GameFont("monospace", 20, (0,0,0)), 
                                        200,y+40)
-        self.next_situation_class = FirstMainMap
+        pygame.display.flip()
+
+        self.next_situation_class = FirstMainMapSituation
+        self.key_down_enabled_after = time.time()+0.2
+        self.done = False
         
     def handle_event(self, event):
         if event.type == pygame.QUIT:
@@ -93,7 +98,25 @@ class QuizSummarySituation(utils.SituationBase):
         elif event.type==pygame.KEYDOWN:
             self.done = True
     
+
+class MainMapSituationBase(utils.SituationBase):
+    def __init__(self, g):
+        utils.SituationBase.__init__(self, g)
+        
+        size = self.g.screen.get_size()
+        print size
+        self.background = pygame.Surface(size).convert()
+        self.background.fill((255, 255, 255))
+        self.g.screen.blit(self.background, (0, 0)) 
+        
+        self.panes = {}
+        self.panes['CLOCK'] = None #ClockPane(self, 
     
+class FirstMainMapSituation(MainMapSituationBase):
+    def __init__(self, g):
+        MainMapSituationBase.__init__(self, g)
+        
+        
             
 class QuizSituation(utils.SituationBase):
     questions = {}
@@ -214,12 +237,8 @@ class InTheEndGame(utils.GameBase):
         self.quiz_answers.append([q, a])
         self.quiz_by_q[q] = a
 
-
-    def firstSituation(self):
-        utils._log("first sit")
-        sit = FirstNewspaperSituation(self)
-        utils._log(sit)
-        return sit
+    def first_situation(self):
+        return FirstNewspaperSituation(self)
 
         
 

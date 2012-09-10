@@ -183,12 +183,29 @@ class GameBase(object):
     def get_options(self):
         # TODO: support optparse for more detailed options
         global _verbosity
-        if "--debug" in sys.argv[1:]:
-            _verbosity = 2
-            _log("debug enabled")
+        self.jump_to = None
+        for a in sys.argv[1:]:
+            if a=='--debug':
+                _verbosity = 2
+                _log("debug enabled")
+            elif a.startswith("--jump-to="):
+                self.jump_to = a.split("=",1)[-1]
         
-    def firstSituation(self):
+        
+    def first_situation(self):
         return None
+    
+    def _first_situation(self):
+        if self.jump_to:
+            _log("JUMPING TO SITUATION: %s" % self.jump_to)
+            calling_module = __import__("__main__")
+            print calling_module
+            cls = getattr(calling_module, self.jump_to)
+            print cls
+            return cls(self)
+        else:
+            return self.first_situation()
+
         
     def render_text(self, s, game_font, x, y):
         antialias = True
@@ -257,7 +274,7 @@ class SituationBase(object):
 
 def main(game_class):
     gc = game_class()
-    sit = gc.firstSituation()
+    sit = gc._first_situation()
     _log("first sit: %s" % sit.__class__.__name__)
     while sit:
         sit = sit.run()
