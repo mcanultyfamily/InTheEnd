@@ -9,19 +9,39 @@ def _log(msg, verbosity=1):
     if verbosity<=_verbosity:
         print msg
 
+class Cache(dict):
+    pass    
+    
+
+_image_cache = Cache()
 def load_image(file_name, colorkey=None):
-    fullname = os.path.join(file_name)
-    try:
-        image = pygame.image.load(fullname)
-    except pygame.error, message:
-        print 'Cannot load image:', fullname
-        raise SystemExit, message
-    image = image.convert()
-    if colorkey is not None:
-        if colorkey is -1:
-            colorkey = image.get_at((0,0))
-        image.set_colorkey(colorkey, RLEACCEL)
-    return image
+    key = (file_name, colorkey)
+    if not key in _image_cache:
+        fullname = os.path.join(file_name)
+        try:
+            image = pygame.image.load(fullname)
+        except pygame.error, message:
+            print 'Cannot load image:', fullname
+            raise SystemExit, message
+        image = image.convert()
+        if colorkey is not None:
+            if colorkey is -1:
+                colorkey = image.get_at((0,0))
+            image.set_colorkey(colorkey, RLEACCEL)
+        _image_cache[key] = image
+    return _image_cache[key]
+
+_font_cache = Cache()
+class GameFont(object):
+    def __init__(self, name, size, color):
+        self.name = name
+        self.size = size
+        self.color = color
+        key = (name, size)
+        if not key in _font_cache:
+            _font_cache[key] = pygame.font.SysFont(name, size, True, False)
+        self.font = _font_cache[key]
+
 
 class Button(object):
     def __init__(self, g, normal_image, pressing_image, pressed_image, x, y, name):
@@ -164,12 +184,6 @@ class ClickableText(object):
         else:
             return False
             
-class GameFont(object):
-    def __init__(self, name, size, color):
-        self.name = name
-        self.size = size
-        self.color = color
-        self.font = pygame.font.SysFont(name, size, True, False)
         
 class GameBase(object):
     def __init__(self):

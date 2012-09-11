@@ -2,6 +2,7 @@
 import time
 import datetime
 import csv
+import random
 import pygame
 import utils
 
@@ -134,6 +135,7 @@ class QuizSituation(QuizSituationBase):
         if not QuizSituation.questions:
             self.load_questions()
         self.this_rec = QuizSituation.questions[q_num]
+        self.main_pane.blit(utils.load_image("InterviewGuyLarge.png"), (0,0))
         self.log("Q: %s" % self.this_rec['Question'])
         black_font = utils.GameFont("monospace", 20, (0,0,0))
         self.unpressed_font = black_font
@@ -277,7 +279,16 @@ class FirstMainMapSituation(MapSituationBase):
         MapSituationBase.__init__(self, g)
         self.FRAME_RATE = 22
         self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
-        
+        map_tile = utils.load_image("map1.png")
+        tiles = [map_tile]
+        for angle in [90, 180, 270]:
+            tiles.append(pygame.transform.rotate(map_tile, angle))
+            
+        for row in range(5):
+            for col in range(2):
+                img = random.choice(tiles)
+                self.panes['MAP'].blit(img, (col*100, row*100))
+        print "MAP TILE:", map_tile.get_rect()
 
 # TODO: layout blocks...
 
