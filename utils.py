@@ -220,6 +220,17 @@ class GameBase(object):
         pygame.quit()
 
 
+class Pane(object):
+    def __init__(self, sit, left, top, right, bottom, color):
+        self.sit = sit
+        self.g = sit.g
+        w = right-left
+        h = bottom-top
+        self.background = pygame.Surface((w, h)).convert()
+        self.background.fill(color)
+        self.g.screen.blit(self.background, (left, top)) 
+
+
 class SituationBase(object):
     """Base class provides a loop that does some basic stuff"""
     def __init__(self, game_obj):

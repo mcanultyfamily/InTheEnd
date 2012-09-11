@@ -104,13 +104,16 @@ class MainMapSituationBase(utils.SituationBase):
         utils.SituationBase.__init__(self, g)
         
         size = self.g.screen.get_size()
-        print size
         self.background = pygame.Surface(size).convert()
         self.background.fill((255, 255, 255))
         self.g.screen.blit(self.background, (0, 0)) 
         
         self.panes = {}
-        self.panes['CLOCK'] = None #ClockPane(self, 
+        self.panes['EVENT'] = utils.Pane(self, 0, 0, 400, 500, (180,180,180))
+        self.panes['MAP'] = utils.Pane(self, 400, 0, 600, 500, (120,180,120))
+        self.panes['CLOCK'] = utils.Pane(self, 600, 0, 800, 30, (0,0,0))
+        self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
+        self.panes['STATUS'] = utils.Pane(self, 600, 230, 800, 500, (200,180,180))
     
 class FirstMainMapSituation(MainMapSituationBase):
     def __init__(self, g):
@@ -225,7 +228,7 @@ class InTheEndGame(utils.GameBase):
     def __init__(self):
         utils.GameBase.__init__(self)
 
-        DISPLAY_SIZE = (600, 600)
+        DISPLAY_SIZE = (800, 500)
         DISPLAY_MODE = 1
         self.init_display(DISPLAY_SIZE, DISPLAY_MODE)
         #self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
