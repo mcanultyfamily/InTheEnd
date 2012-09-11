@@ -6,7 +6,7 @@ import utils
 
 
 class SpinImageSituation(utils.SituationBase):
-    def __init__(self, g, image_file, next_situation_class, spin_rate=100, rotations=2):
+    def __init__(self, g, image_file, next_situation_class, press_next=False, spin_rate=100, rotations=2):
         utils.SituationBase.__init__(self, g)
         self.next_situation_class = next_situation_class
         self.FRAME_RATE = spin_rate
@@ -19,6 +19,15 @@ class SpinImageSituation(utils.SituationBase):
         self.current_angle = 0
         self.rotations_left = rotations
         self.need_draw = True
+        
+        if (press_next):
+            font = pygame.font.Font(None, 36)
+            text = font.render("Press Space to continue", 1,  (10, 10, 10))
+            textpos = text.get_rect()
+            textpos.centerx = self.background.get_rect().centerx
+            textpos.y = self.background.get_rect().bottom - 40
+            self.background.blit(text, textpos)
+
 
     def rotate_image(self):
         #self.log("Rotations Left %s, current angle: %s" % (self.rotations_left, self.current_angle))
@@ -54,11 +63,11 @@ class SpinImageSituation(utils.SituationBase):
         
 class FirstNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
-        SpinImageSituation.__init__(self, g, "test.png", SecondNewspaperSituation)
+        SpinImageSituation.__init__(self, g, "test.png", SecondNewspaperSituation, True)
         
 class SecondNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
-        SpinImageSituation.__init__(self, g, "test.png", QuizSituation)
+        SpinImageSituation.__init__(self, g, "test.png", QuizSituation, True)
     
         
 class QuizSummarySituation(utils.SituationBase):
@@ -141,6 +150,7 @@ class QuizSituation(utils.SituationBase):
         self.init_response("C", 50, 160)
         self.answer = None
         self.next_button = None
+        self.python_quit = False
         pygame.display.flip()
     
     def init_response(self, r, x, y):
@@ -154,6 +164,8 @@ class QuizSituation(utils.SituationBase):
             
 
     def next_situation(self):
+        if (self.python_quit):
+            return None;
         q_num = self.this_rec['Next Number']
         if q_num in QuizSituation.questions:
             return QuizSituation(self.g, q_num)
@@ -200,6 +212,8 @@ class QuizSituation(utils.SituationBase):
         if event.type == pygame.QUIT:
             self.next_situation_class = None
             self.done = True
+            self.python_quit = True
+            self.log("Quit detected in Quiz")
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             self._click(event.type==pygame.MOUSEBUTTONUP)
             # TODO: trigger next situation...

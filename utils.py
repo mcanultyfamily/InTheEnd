@@ -252,6 +252,7 @@ class SituationBase(object):
         
     def handle_event(self, event):
         if event.type == pygame.QUIT:
+            self.log("Quit detected in utils")
             self.next_situation_class = None
             self.done = True
         elif event.type==pygame.KEYDOWN:
