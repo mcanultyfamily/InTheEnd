@@ -207,12 +207,14 @@ class GameBase(object):
             return self.first_situation()
 
         
-    def render_text(self, s, game_font, x, y):
+    def render_text(self, s, game_font, x, y, bg=None):
         antialias = True
         text = game_font.font.render(s, antialias, game_font.color)
         textRect = text.get_rect()
         textRect.left = self.screen.get_rect().left+x
         textRect.top = self.screen.get_rect().top+y
+        if bg:
+            self.screen.blit(bg, textRect, area=textRect)
         self.screen.blit(text, textRect) 
         return text, textRect
         
@@ -224,12 +226,20 @@ class Pane(object):
     def __init__(self, sit, left, top, right, bottom, color):
         self.sit = sit
         self.g = sit.g
+        self.x_offset = left
+        self.y_offset = top
         w = right-left
         h = bottom-top
         self.background = pygame.Surface((w, h)).convert()
         self.background.fill(color)
         self.g.screen.blit(self.background, (left, top)) 
 
+    def render_text(self, text, font, x, y, bg=None):
+        return self.g.render_text(text, font, self.x_offset+x, self.y_offset+y)
+
+    def blit(self, img, topleft):
+        x, y = topleft
+        self.g.screen.blit(img, (self.x_offset+x, self.y_offset+y))
 
 class SituationBase(object):
     """Base class provides a loop that does some basic stuff"""
