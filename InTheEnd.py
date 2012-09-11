@@ -108,11 +108,11 @@ class SpinImageSituation(SituationBase):
         
 class FirstNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
-        SpinImageSituation.__init__(self, g, "test.png", SecondNewspaperSituation, "Sept. 10, 2312")
+        SpinImageSituation.__init__(self, g, "first_news.png", SecondNewspaperSituation, "Sept. 10, 2312")
         
 class SecondNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
-        SpinImageSituation.__init__(self, g, "test.png", QuizSituation, "Sept. 19, 2407")
+        SpinImageSituation.__init__(self, g, "second_news.png", QuizSituation, "Sept. 19, 2407")
     
 
 class QuizSituationBase(SituationBase):
