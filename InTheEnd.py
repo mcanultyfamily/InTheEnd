@@ -56,7 +56,7 @@ class SpinImageSituation(SituationBase):
         self.next_situation_class = next_situation_class
         self.FRAME_RATE = spin_rate
         self.ROTATE_INCREMENT = 5
-        self.base_image = pygame.image.load(image_file).convert()
+        self.base_image = utils.load_image(image_file)
         self.base_center = self.base_image.get_rect().center
         self.main_pane = self.panes['PAPER'] = utils.Pane(self, 0, 0, 600, 500, (255, 255, 255))
         self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
@@ -119,6 +119,9 @@ class QuizSituationBase(SituationBase):
     def __init__(self, g):
         SituationBase.__init__(self, g)
         self.FRAME_RATE = 5
+        self.panes['BADGE'] = utils.Pane(self, 600, 30, 800, 230, (255,255,255))
+        badge = utils.load_image("fbi_badge.png")
+        self.panes['BADGE'].blit(badge, (0,0))
         self.main_pane = self.panes['SURVEY'] = utils.Pane(self, 0, 0, 600, 500, (255, 255, 255))
         self.main_pane.blit(self.main_pane.background, (0, 0)) 
         self.panes['CLOCK'].set_time("Oct. 3, 2407")
