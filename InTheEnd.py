@@ -298,6 +298,7 @@ class MapPane(utils.Pane):
         self.curr_x = None
         self.curr_y = None
         self.icon = pygame.Surface((10,10)).convert()
+        self.icon_size = self.icon.get_size()
         pygame.draw.circle(self.icon, (255,0,0), (5, 5), 10)
         
     def set_location_by_xy(self, x, y):
@@ -339,13 +340,25 @@ class MapPane(utils.Pane):
         bottom = top+self.h
         
         left = max(0, self.curr_x-(self.w/2))
-        right = min(self.map_w, left+self.w)
+        right = min(self.map_w, left+self.w-1)
         left = right-self.w
-        return pygame.Rect(left, top, right, bottom)
+        return pygame.Rect(left, top, self.w, self.h)
+
+    def move(self, dx, dy):
+        icon_w, icon_h = self.icon_size
+        start = (self.curr_x, self.curr_y)
+        x = min(max(icon_w, self.curr_x+dx), self.map_w-icon_w)
+        y = min(max(icon_h, self.curr_y+dy), self.map_h-icon_h)
+        self.set_location_by_xy(x, y)
+        self.render_visible()
+        pygame.display.flip()
+        end = (self.curr_x, self.curr_y)
+        self.sit.log("MAP MOVE: %s -> %s" % (start, end), verbosity=2)
         
 class MapSituationBase(SituationBase):
     def __init__(self, g):
         SituationBase.__init__(self, g)
+        self.FRAME_RATE=50
         
         self.panes['EVENT'] = utils.Pane(self, 0, 0, 400, 500, (180,180,180))
         self.panes['MAP'] = self.map_pane = MapPane(self)
@@ -376,32 +389,18 @@ class MapSituationBase(SituationBase):
 
     def event_key_done(self, event):
         self.done = True
-        
-    
-    def _set_loc(self, dx, dy):
-        print "%4s, %4s -> " % (self.map_pane.curr_x, self.map_pane.curr_y),
-        y = min(max(0, self.map_pane.curr_y+dy), self.map_pane.map_h)
-        x = min(max(0, self.map_pane.curr_x+dx), self.map_pane.map_w)
-        self.map_pane.set_location_by_xy(x, y)
-        self.map_pane.render_visible()
-        pygame.display.flip()
-        print "%4s, %4s" % (self.map_pane.curr_x, self.map_pane.curr_y)
-    
+           
     def event_key_up(self, event):
-        print "EVENT UP ",
-        self._set_loc(0, -5)
+        self.map_pane.move(0, -5)
 
     def event_key_down(self, event):
-        print "EVENT DOWN",
-        self._set_loc(0, 5)
+        self.map_pane.move(0, 5)
 
     def event_key_left(self, event):
-        print "EVENT LEFT",
-        self._set_loc(-5, 0)
+        self.map_pane.move(-5, 0)
         
     def event_key_right(self, event):
-        print "EVENT RIGHT",
-        self._set_loc(5, 0)
+        self.map_pane.move(5, 0)
         
 class FirstMainMapSituation(MapSituationBase):
     def __init__(self, g):
@@ -421,7 +420,7 @@ class InTheEndGame(utils.GameBase):
         self.init_display(DISPLAY_SIZE, DISPLAY_MODE)
         pygame.display.set_caption("In the End")
         #self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
-
+        pygame.key.set_repeat(250, 50)
         self.quiz_answers = []
         self.quiz_by_q = {}
     

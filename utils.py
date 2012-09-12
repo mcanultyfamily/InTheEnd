@@ -239,7 +239,7 @@ class GameBase(object):
 class Pane(object):
     def __init__(self, sit, left, top, right, bottom, color):
         self.sit = sit
-        print "NEW PANE %s : %s, %s, %s, %s" % (self.__class__.__name__, left, top, right, bottom)
+        _log("NEW PANE %s : %s, %s, %s, %s" % (self.__class__.__name__, left, top, right, bottom), verbosity=2)
         self.g = sit.g
         self.x_offset = left
         self.y_offset = top
@@ -256,7 +256,7 @@ class Pane(object):
         return self.x_offset+x, self.y_offset+y
         
     def blit(self, img, topleft, area=None):
-        print "PANE BLIT: %s, %s" % (topleft, area)
+        _log("PANE BLIT: %s, %s" % (topleft, area), verbosity=3)
         x, y = topleft
         x, y = self.offset(x, y)
         self.g.screen.blit(img, (x, y), area=area)
@@ -270,8 +270,8 @@ class SituationBase(object):
         self.done = False
         self.log("init")
     
-    def log(self, msg):
-        _log("%s: %s" % (self.__class__.__name__, msg), verbosity=2)
+    def log(self, msg, verbosity=2):
+        _log("%s: %s" % (self.__class__.__name__, msg), verbosity=verbosity)
         
     def run(self):
         start = time.time()
