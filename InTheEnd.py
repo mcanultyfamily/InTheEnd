@@ -136,7 +136,8 @@ class QuizSituation(QuizSituationBase):
         if not QuizSituation.questions:
             self.load_questions()
         self.this_rec = QuizSituation.questions[q_num]
-        self.main_pane.blit(utils.load_image("interview_room2.jpg"), (0, 0))
+        self.background_image = utils.load_image("interview_room2.jpg")
+        self.main_pane.blit(self.background_image, (0, 0))
         
         interviewGuy = pygame.transform.smoothscale(utils.load_image("InterviewGuyLarge.png"), (117, 192));
         self.main_pane.blit(interviewGuy, (10,10))
@@ -146,11 +147,8 @@ class QuizSituation(QuizSituationBase):
         self.pressed_font = utils.GameFont("monospace", 20, (30,148,89))
         self.textx = 50
         question_offset = 150
-        textlines = utils.wrapline(self.this_rec['Question'], black_font.font, self.main_pane.w - self.textx - 10 - question_offset)
-        y = 75
-        for text in textlines:
-            self.main_pane.render_text(text, black_font, self.textx + question_offset, y)
-            y += 20
+        
+        y = self.g.render_text_wrapped(self.this_rec['Question'], black_font, 50+150, 75, width=self.main_pane.w-60-question_offset)
         
         self.texty = 200
         self.responses = []
@@ -168,7 +166,7 @@ class QuizSituation(QuizSituationBase):
             ct = utils.ClickableText(self.main_pane, 
                                      self.this_rec[name], 
                                      self.unpressed_font, 
-                                     x, y)
+                                     x, y, id=r.lower())
             ct.reply = self.this_rec["Answer to %s" % r]
             self.responses.append(ct)
             
@@ -184,45 +182,57 @@ class QuizSituation(QuizSituationBase):
 
     def _click(self, mouse_up):        
         mouse = pygame.mouse.get_pos()
-        if not self.answer:
-            return self._click_response(mouse, mouse_up)
-        else:
-            self._click_next(mouse, mouse_up)
+        if self.answer and \
+           self._click_next(mouse, mouse_up):
+            return
+            
+        self._click_response(mouse, mouse_up)
     
     def _click_response(self, mouse, mouse_up):
         answer = None
         for ct in self.responses:
             if ct.mouse_in_rect(mouse):
                 answer = ct
-                if ct.set_font(self.pressed_font):
-                    ct.render()
-            elif ct.set_font(self.unpressed_font):
-                ct.render()
                 
         if answer:
             self.log("Clicked Answer: %s" % answer.text)
-        if mouse_up and answer:
-            self.log("mouse up %s" % answer.text)
-            self.answer = answer
-            if answer.reply:
-                mono_font = utils.GameFont("monospace", 20, (153, 128, 18))
-                textlines = utils.wrapline(answer.reply, mono_font.font, self.main_pane.w - self.textx - 10)
-                y = self.texty + 140
-                for text in textlines:
-                    self.main_pane.render_text(text, mono_font,  self.textx, y)
-                    y += 20
-            self.g.add_quiz_answer(self.this_rec['Question'], answer.text)
+            if mouse_up:
+                self.log("mouse up %s" % answer.text)
+                self._select(answer)
+            
+    def _select(self, answer):   
+        if self.answer and self.answer.reply:
+            self.answer.set_font(self.unpressed_font)
+            self.answer.render()
+            area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
+            self.main_pane.blit(self.background_image, (self.reply_left, self.reply_top), area=area)
+        self.answer = answer
+        self.answer.set_font(self.pressed_font)
+        self.answer.render()
+        if answer.reply:
+            mono_font = utils.GameFont("monospace", 20, (153, 128, 18))
+            y = self.texty + 140
+            self.reply_width = self.main_pane.w - self.textx - 10
+            self.reply_top = y
+            self.reply_left = self.textx
+            self.reply_bottom = self.main_pane.render_text_wrapped(answer.reply, mono_font, self.reply_left, self.reply_top, self.reply_width)
+            self.reply_height = self.reply_bottom-self.reply_top
+            
+        self.g.add_quiz_answer(self.this_rec['Question'], answer.text)
+        
+        if not self.next_button:
             self.next_button = utils.ClickableText(self.main_pane, "Next",
-                                       utils.GameFont("monospace", 20, (0,0,0)), 
-                                       200,self.texty + 200)
+                                   utils.GameFont("monospace", 20, (0,0,0)), 
+                                   200, self.texty + 200)
                                        
     def _click_next(self, mouse, mouse_up):
-        if self.next_button.mouse_in_rect(mouse):
+        if self.next_button and self.next_button.mouse_in_rect(mouse):
             if mouse_up:
                 self.done = True
             elif self.next_button.set_font(utils.GameFont("monospace", 20, (80,80,80))):
                 self.next_button.render()
-                
+            return True
+        
     def handle_event(self, event):
         if event.type == pygame.QUIT:
             self.next_situation_class = None
@@ -232,8 +242,15 @@ class QuizSituation(QuizSituationBase):
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             self._click(event.type==pygame.MOUSEBUTTONUP)
             # TODO: trigger next situation...
-        elif event.type==pygame.KEYDOWN and self.next_button:
-            self.done = True
+        elif event.type==pygame.KEYDOWN:
+            if event.key==pygame.K_n and self.next_button:
+                self.done = True
+            elif event.key==pygame.K_a:
+                self._select(self.responses[0])
+            elif event.key==pygame.K_b:
+                self._select(self.responses[1])
+            elif event.key==pygame.K_c:
+                self._select(self.responses[2])
 
         
     def load_questions(self):
@@ -347,6 +364,20 @@ class MapPane(utils.Pane):
         x = elem.left+(elem.width/2)
         y = elem.top+(elem.height/2)
         self.set_location_by_xy(x, y)
+    
+    def mouse_to_elem(self, mouse):
+        x, y = mouse
+        for ex, ey, elem in self.elems_by_xy:
+            if x<ex:
+                continue
+            if y<ey:
+                continue
+            if x>(elem.left+elem.width):
+                continue
+            if y>(elem.top+elem.height):
+                continue
+            return elem
+        return None
         
     def add_element(self, rec, sort_xy=True):
         elem = MapElem(self.whole_map, rec)
@@ -369,7 +400,25 @@ class MapPane(utils.Pane):
         self.blit(self.whole_map, (0, 0), area=v_rect) 
         self.blit(self.icon, (x, y))
 
-
+    def mouse_to_pane(self, x, y):
+        a, b = x, y
+        x = x-self.x_offset
+        y = y-self.y_offset
+        print "MOUSE TO PANE : %s, %s -> %s, %s" % (a, b, x, y)
+        return x, y
+    
+    def pane_to_map(self, x, y):
+        a, b = x, y
+        v_rect = self._calc_visible_rect()
+        x = v_rect[0]+x
+        y = v_rect[1]+y
+        print "PANE TO MAP : %s, %s -> %s, %s (%s)" % (a, b, x, y, v_rect)
+        return x, y
+    
+    def mouse_to_map(self, x, y):
+        x, y = self.mouse_to_pane(x, y)
+        return self.pane_to_map(x, y)
+        
     def _calc_visible_rect(self):
         bottom = min(self.curr_y+10, self.map_h)
         top = max(bottom-self.h, 0)
@@ -378,6 +427,7 @@ class MapPane(utils.Pane):
         left = max(0, self.curr_x-(self.w/2))
         right = min(self.map_w, left+self.w-1)
         left = right-self.w
+        print "CVR: %s, %s -> %s, %s" % (self.curr_x, self.curr_y, left, top)
         return pygame.Rect(left, top, self.w, self.h)
 
     def move(self, dx, dy):
@@ -412,6 +462,8 @@ class MapSituationBase(SituationBase):
         self.key_handlers[pygame.K_d] = self.key_handlers[pygame.K_RIGHT] = self.event_key_right
         self.key_handlers[pygame.K_q] = self.key_handlers[pygame.K_ESCAPE] = self.event_key_done
         
+        self.move_back_allowed = False
+        self.cant_move_back_sound = pygame.mixer.Sound("default_cant_move_back.wav")
         self.map_pane.set_location_by_name("Home")
         self.map_pane.render_visible()
         
@@ -433,7 +485,12 @@ class MapSituationBase(SituationBase):
         elif event.type==pygame.KEYUP:
             self.move_size = BASE_MOVE_SIZE
             self.consec_keydowns = 0
-            
+    
+    def _click(self, mouse_up):
+        mouse = pygame.mouse.get_pos()
+        # Does Nothing Now...
+        return            
+                
     def event_key_done(self, event):
         self.done = True
            
@@ -441,14 +498,17 @@ class MapSituationBase(SituationBase):
         self.map_pane.move(0, -self.move_size)
 
     def event_key_down(self, event):
-        self.map_pane.move(0, self.move_size)
+        if self.move_back_allowed:
+            self.map_pane.move(0, self.move_size)
+        elif self.cant_move_back_sound:
+            self.cant_move_back_sound.play()
 
     def event_key_left(self, event):
         self.map_pane.move(-self.move_size, 0)
         
     def event_key_right(self, event):
         self.map_pane.move(self.move_size, 0)
-        
+
 class FirstMainMapSituation(MapSituationBase):
     def __init__(self, g):
         MapSituationBase.__init__(self, g)

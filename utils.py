@@ -178,15 +178,28 @@ class RadioButtons(object):
             button.draw()
 
 class ClickableText(object):
-    def __init__(self, g, text, font, x, y):
+    def __init__(self, g, text, font, x, y, id=None):
         self.g = g
+        self.id = id
         self.text = text
         self.font = font
         self.x, self.y = x, y
         self.render()
         
     def render(self):
-        text, self.rect = self.g.render_text(self.text, self.font, self.x, self.y)
+        text = self.text
+        if self.id:
+            text = "%s. %s" % (self.id, text)
+        text, self.rect = self.g.render_text(text, self.font, self.x, self.y)
+        left = self.rect[0]-5
+        top = self.rect[1]-5
+        if hasattr(self.g, "w"):
+            w = self.g.w
+        else:
+            w = 50
+        width = max(self.rect[2]+5, w-left+5)
+        height = self.rect[3]+10
+        self.rect = pygame.Rect(left, top, width, height)
         
     def mouse_in_rect(self, mouse):
         return self.rect.collidepoint(mouse)
@@ -245,6 +258,13 @@ class GameBase(object):
             self.screen.blit(bg, textRect, area=textRect)
         self.screen.blit(text, textRect) 
         return text, textRect
+    
+    def render_text_wrapped(self, s, game_font, x, y, width, leading=2, bg=None):
+        textlines = wrapline(s, game_font.font, width)
+        for line in textlines:
+            text, textRect = self.render_text(line, game_font, x, y, bg=bg)
+            y += textRect[3]+leading
+        return y
         
     def quit(self):
         pygame.quit()
@@ -265,6 +285,9 @@ class Pane(object):
 
     def render_text(self, text, font, x, y, bg=None):
         return self.g.render_text(text, font, self.x_offset+x, self.y_offset+y)
+
+    def render_text_wrapped(self, text, font, x, y, width, bg=None):
+        return self.g.render_text_wrapped(text, font, self.x_offset+x, self.y_offset+y, width, bg=bg)
 
     def offset(self, x, y):
         return self.x_offset+x, self.y_offset+y
