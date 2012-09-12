@@ -239,21 +239,27 @@ class GameBase(object):
 class Pane(object):
     def __init__(self, sit, left, top, right, bottom, color):
         self.sit = sit
+        print "NEW PANE %s : %s, %s, %s, %s" % (self.__class__.__name__, left, top, right, bottom)
         self.g = sit.g
         self.x_offset = left
         self.y_offset = top
-        w = right-left
-        h = bottom-top
-        self.background = pygame.Surface((w, h)).convert()
+        self.w = right-left
+        self.h = bottom-top
+        self.background = pygame.Surface((self.w, self.h)).convert()
         self.background.fill(color)
         self.g.screen.blit(self.background, (left, top)) 
 
     def render_text(self, text, font, x, y, bg=None):
         return self.g.render_text(text, font, self.x_offset+x, self.y_offset+y)
 
-    def blit(self, img, topleft):
+    def offset(self, x, y):
+        return self.x_offset+x, self.y_offset+y
+        
+    def blit(self, img, topleft, area=None):
+        print "PANE BLIT: %s, %s" % (topleft, area)
         x, y = topleft
-        self.g.screen.blit(img, (self.x_offset+x, self.y_offset+y))
+        x, y = self.offset(x, y)
+        self.g.screen.blit(img, (x, y), area=area)
 
 class SituationBase(object):
     """Base class provides a loop that does some basic stuff"""

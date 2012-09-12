@@ -6,6 +6,8 @@ import random
 import pygame
 import utils
 
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 500
 
 class ClockPane(utils.Pane):
     def __init__(self, sit):
@@ -265,30 +267,148 @@ class QuizSummarySituation(QuizSituationBase):
             self.done = True
     
 
+class MapElem(object):
+    def __init__(self, surface, name, rect, color):
+        self.surface = surface
+        self.name = name
+        self.rect = pygame.Rect(rect[0],rect[1],rect[2],rect[3])
+        self.color = color
+        
+    def render(self):
+        width = 3
+        pygame.draw.rect(self.surface, self.color, self.rect, width)
+    
+class MapPane(utils.Pane):
+    def __init__(self, sit):
+        utils.Pane.__init__(self,sit, 400, 0, 600, 500, (120,180,120))
+        self.whole_map_image = utils.load_image("whole_map.png")
+        map_size = self.whole_map_image.get_size()
+        self.map_w, self.map_h = map_size
+        self.whole_map = pygame.Surface(map_size).convert()
+        print "MAP SIZE: %s", map_size
+        
+        # TODO: load in map elements...
+        self.elems = []
+        self.elems_by_xy = []
+        self.elems_by_name = {}
+        self.add_element("Home", (240, 1230, 265, 1260), (0,255,0), sort_xy=False)
+        self.elems_by_xy.sort()        
+        self.render_whole_map()
+    
+        self.curr_x = None
+        self.curr_y = None
+        self.icon = pygame.Surface((10,10)).convert()
+        pygame.draw.circle(self.icon, (255,0,0), (5, 5), 10)
+        
+    def set_location_by_xy(self, x, y):
+        self.curr_x = x
+        self.curr_y = y
+        self.render_visible()
+    
+    def set_location_by_name(self, name):
+        elem = self.elems_by_name[name]
+        x, y = elem.rect.center
+        self.set_location_by_xy(x, y)
+        
+    def add_element(self, name, loc_rect, color, sort_xy=True):
+        elem = MapElem(self.whole_map, name, loc_rect, color)
+        self.elems.append(elem)
+        x, y = loc_rect[:2]
+        self.elems_by_xy.append((x, y, elem))
+        self.elems_by_name[name] = elem
+        if sort_xy:
+            self.elems_by_xy.sort()
 
+    def render_whole_map(self):
+        self.whole_map.blit(self.whole_map_image, (0,0))
+        for elem in self.elems: 
+            elem.render()
+    
+    def render_visible(self):
+        v_rect = self._calc_visible_rect()
+        x = self.curr_x-v_rect.topleft[0]
+        y = self.curr_y-v_rect.topleft[1]
+
+        self.blit(self.whole_map, (0, 0), area=v_rect) 
+        self.blit(self.icon, (x, y))
+
+
+    def _calc_visible_rect(self):
+        bottom = min(self.curr_y+10, self.map_h)
+        top = max(bottom-self.h, 0)
+        bottom = top+self.h
+        
+        left = max(0, self.curr_x-(self.w/2))
+        right = min(self.map_w, left+self.w)
+        left = right-self.w
+        return pygame.Rect(left, top, right, bottom)
+        
 class MapSituationBase(SituationBase):
     def __init__(self, g):
         SituationBase.__init__(self, g)
         
         self.panes['EVENT'] = utils.Pane(self, 0, 0, 400, 500, (180,180,180))
-        self.panes['MAP'] = utils.Pane(self, 400, 0, 600, 500, (120,180,120))
+        self.panes['MAP'] = self.map_pane = MapPane(self)
         self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
+
+        self.key_handlers = {}
+        self.key_handlers[pygame.K_w] = self.key_handlers[pygame.K_UP] = self.event_key_up
+        self.key_handlers[pygame.K_a] = self.key_handlers[pygame.K_LEFT] = self.event_key_left
+        self.key_handlers[pygame.K_s] = self.key_handlers[pygame.K_DOWN] = self.event_key_down
+        self.key_handlers[pygame.K_d] = self.key_handlers[pygame.K_RIGHT] = self.event_key_right
+        self.key_handlers[pygame.K_q] = self.key_handlers[pygame.K_ESCAPE] = self.event_key_done
+        
+        self.map_pane.set_location_by_name("Home")
+        self.map_pane.render_visible()
+        
+    def handle_event(self, event):
+        if event.type == pygame.QUIT:
+            self.next_situation_class = None
+            self.done = True
+            self.python_quit = True
+            self.log("Quit detected in Quiz")
+        elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            self._click(event.type==pygame.MOUSEBUTTONUP)
+            # TODO: trigger next situation...
+        elif event.type==pygame.KEYDOWN:
+            if event.key in self.key_handlers:
+                self.key_handlers[event.key](event)
+
+    def event_key_done(self, event):
+        self.done = True
+        
+    
+    def _set_loc(self, dx, dy):
+        print "%4s, %4s -> " % (self.map_pane.curr_x, self.map_pane.curr_y),
+        y = min(max(0, self.map_pane.curr_y+dy), self.map_pane.map_h)
+        x = min(max(0, self.map_pane.curr_x+dx), self.map_pane.map_w)
+        self.map_pane.set_location_by_xy(x, y)
+        self.map_pane.render_visible()
+        pygame.display.flip()
+        print "%4s, %4s" % (self.map_pane.curr_x, self.map_pane.curr_y)
+    
+    def event_key_up(self, event):
+        print "EVENT UP ",
+        self._set_loc(0, -5)
+
+    def event_key_down(self, event):
+        print "EVENT DOWN",
+        self._set_loc(0, 5)
+
+    def event_key_left(self, event):
+        print "EVENT LEFT",
+        self._set_loc(-5, 0)
+        
+    def event_key_right(self, event):
+        print "EVENT RIGHT",
+        self._set_loc(5, 0)
         
 class FirstMainMapSituation(MapSituationBase):
     def __init__(self, g):
         MapSituationBase.__init__(self, g)
         self.FRAME_RATE = 22
         self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
-        map_tile = utils.load_image("map1.png")
-        tiles = [map_tile]
-        for angle in [90, 180, 270]:
-            tiles.append(pygame.transform.rotate(map_tile, angle))
-            
-        for row in range(5):
-            for col in range(2):
-                img = random.choice(tiles)
-                self.panes['MAP'].blit(img, (col*100, row*100))
-        print "MAP TILE:", map_tile.get_rect()
+
 
 # TODO: layout blocks...
 
