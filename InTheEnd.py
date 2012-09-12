@@ -118,6 +118,113 @@ class SecondNewspaperSituation(SpinImageSituation):
         SpinImageSituation.__init__(self, g, "second_news.png", QuizSituation, "Sept. 19, 2407")
     
 
+
+class QuestionPane(utils.Pane):
+    def __init__(self, sit, width, background, picture, desc, responses, has_next):
+        utils.Pane.__init__(self, sit, 0, 0, width, 500, (250,250,250))   
+        self.background = background
+        self.width = width
+        self.picture = picture
+        self.desc = desc
+        self.has_next = has_next
+        self.next_button = None
+        self.responses = []
+        self.answer = None
+        
+        if self.background:
+            self.blit(self.background, (0,0))
+        if self.picture:
+            self.blit(self.picture, (10,10))
+
+        black_font = utils.GameFont("monospace", 20, (0,0,0))
+        self.unpressed_font = black_font
+        self.pressed_font = utils.GameFont("monospace", 20, (30,148,89))
+
+        self.text_x = x = 150
+        y = 75
+        width = self.width-(20+x)
+        print "Q: %s, %s" % (x, y)
+        ignored, rect = self.render_text_wrapped(desc, black_font, x, y, width)
+
+        y = 200        
+        for id, response, reply in responses:
+            print "A: %s, %s" % (x, y)
+            ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
+            ct.reply = reply
+            self.responses.append(ct)
+            print ct.rect
+            y += ct.rect[3]+5
+        
+        print "BOT: %s, %s" % (x, y)
+        self.text_y = y
+        
+    def event_click(self, mouse, mouse_up):
+        self.sit.log("event_click %s - %s [next button %s]" % (mouse, mouse_up, bool(self.next_button)))
+        # Handle Next Button
+        if self.next_button and self.next_button.mouse_in_rect(mouse):
+            if mouse_up:
+                self.sit.done = True
+            elif self.next_button.set_font(utils.GameFont("monospace", 20, (80,80,80))):
+                self.next_button.render()
+            return True
+        
+        # Check answers
+        answer = None
+        for ct in self.responses:
+            if ct.mouse_in_rect(mouse):
+                answer = ct
+        
+        # Select answer
+        if answer:
+            self.sit.log("Clicked Answer: %s" % answer.text)
+            if mouse_up:
+                self.sit.log("mouse up %s" % answer.text)
+                self.select(answer)
+            return True
+        else:
+            return False
+            
+    def select(self, answer):
+        if self.answer and self.answer.reply:
+            self.answer.set_font(self.unpressed_font)
+            self.answer.render()
+            # TODO - I think this can move into render_text_wrapped(...bg=)
+            area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
+            self.blit(self.background, (self.reply_left, self.reply_top), area=area)
+        self.answer = answer
+        self.answer.set_font(self.pressed_font)
+        self.answer.render()
+        if answer.reply:
+            mono_font = utils.GameFont("monospace", 20, (153, 128, 18))
+            y = self.text_y+5
+            self.reply_width = self.w - self.text_x - 10
+            self.reply_top = y
+            self.reply_left = self.text_x
+            ignored, rect = self.render_text_wrapped(answer.reply, mono_font, self.reply_left, self.reply_top, self.reply_width)
+            self.reply_height = rect[3]
+
+        if self.has_next and not self.next_button:
+            x = (self.width*2)/3
+            y = 400
+            self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
+
+    def event_key(self, event):
+        if self.next_button and event.key in (pygame.K_n, pygame.K_RIGHT, pygame.K_SPACE):
+            self.sit.done = True
+            return True
+        elif event.key==pygame.K_a:
+            self.select(self.responses[0])
+            return True
+        elif event.key==pygame.K_b:
+            self.select(self.responses[1])
+            return True
+        elif event.key==pygame.K_c:
+            self.select(self.responses[2])
+            return True
+        else:
+            return False
+
+
 class QuizSituationBase(SituationBase):
     def __init__(self, g):
         SituationBase.__init__(self, g)
@@ -125,10 +232,12 @@ class QuizSituationBase(SituationBase):
         self.panes['BADGE'] = utils.Pane(self, 600, 30, 800, 230, (255,255,255))
         badge = utils.load_image("fbi_badge.png")
         self.panes['BADGE'].blit(badge, (0,0))
+        self.panes['CLOCK'].set_time("Oct. 3, 2407")
+
         self.main_pane = self.panes['SURVEY'] = utils.Pane(self, 0, 0, 600, 500, (255, 255, 255))
         self.main_pane.blit(self.main_pane.background, (0, 0)) 
-        self.panes['CLOCK'].set_time("Oct. 3, 2407")
-            
+        
+        
 class QuizSituation(QuizSituationBase):
     questions = {}
     
@@ -137,128 +246,49 @@ class QuizSituation(QuizSituationBase):
         if not QuizSituation.questions:
             self.load_questions()
         self.this_rec = QuizSituation.questions[q_num]
-        self.background_image = utils.load_image("interview_room2.jpg")
-        self.main_pane.blit(self.background_image, (0, 0))
-        
+        background_image = utils.load_image("interview_room2.jpg")
         interviewGuy = pygame.transform.smoothscale(utils.load_image("InterviewGuyLarge.png"), (117, 192));
-        self.main_pane.blit(interviewGuy, (10,10))
+
+        self.main_pane = QuestionPane(self, 
+                                      600,
+                                      background_image, 
+                                      interviewGuy,
+                                      self.this_rec['Question'],
+                                      [(c, self.this_rec["Response %s" % c], self.this_rec['Answer to %s' % c]) for c in "ABC"],
+                                      has_next=True)
+                                      
         self.log("Q: %s" % self.this_rec['Question'])
-        black_font = utils.GameFont("monospace", 20, (0,0,0))
-        self.unpressed_font = black_font
-        self.pressed_font = utils.GameFont("monospace", 20, (30,148,89))
-        self.textx = 50
-        question_offset = 150
-        
-        y = self.g.render_text_wrapped(self.this_rec['Question'], black_font, 50+150, 75, width=self.main_pane.w-60-question_offset)
-        
-        self.texty = 200
-        self.responses = []
-        self.init_response("A",  self.textx, self.texty + 50)
-        self.init_response("B",  self.textx, self.texty + 80)
-        self.init_response("C",  self.textx, self.texty + 110)
-        self.answer = None
-        self.next_button = None
-        self.python_quit = False
         pygame.display.flip()
-    
-    def init_response(self, r, x, y):
-        name = "Response %s" % r
-        if self.this_rec[name]:
-            ct = utils.ClickableText(self.main_pane, 
-                                     self.this_rec[name], 
-                                     self.unpressed_font, 
-                                     x, y, id=r.lower())
-            ct.reply = self.this_rec["Answer to %s" % r]
-            self.responses.append(ct)
-            
+                
 
     def next_situation(self):
-        if (self.python_quit):
+        if utils.python_quit:
             return None;
+        self.g.add_quiz_answer(self.this_rec['Question'], self.main_pane.answer.text)
         q_num = self.this_rec['Next Number']
         if q_num in QuizSituation.questions:
             return QuizSituation(self.g, q_num)
         else:
             return QuizSummarySituation(self.g)
 
-    def _click(self, mouse_up):        
-        mouse = pygame.mouse.get_pos()
-        if self.answer and \
-           self._click_next(mouse, mouse_up):
-            return
-            
-        self._click_response(mouse, mouse_up)
-    
-    def _click_response(self, mouse, mouse_up):
-        answer = None
-        for ct in self.responses:
-            if ct.mouse_in_rect(mouse):
-                answer = ct
-                
-        if answer:
-            self.log("Clicked Answer: %s" % answer.text)
-            if mouse_up:
-                self.log("mouse up %s" % answer.text)
-                self._select(answer)
-            
-    def _select(self, answer):   
-        if self.answer and self.answer.reply:
-            self.answer.set_font(self.unpressed_font)
-            self.answer.render()
-            area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
-            self.main_pane.blit(self.background_image, (self.reply_left, self.reply_top), area=area)
-        self.answer = answer
-        self.answer.set_font(self.pressed_font)
-        self.answer.render()
-        if answer.reply:
-            mono_font = utils.GameFont("monospace", 20, (153, 128, 18))
-            y = self.texty + 140
-            self.reply_width = self.main_pane.w - self.textx - 10
-            self.reply_top = y
-            self.reply_left = self.textx
-            self.reply_bottom = self.main_pane.render_text_wrapped(answer.reply, mono_font, self.reply_left, self.reply_top, self.reply_width)
-            self.reply_height = self.reply_bottom-self.reply_top
-            
-        self.g.add_quiz_answer(self.this_rec['Question'], answer.text)
-        
-        if not self.next_button:
-            self.next_button = utils.ClickableText(self.main_pane, "Next",
-                                   utils.GameFont("monospace", 20, (0,0,0)), 
-                                   200, self.texty + 200)
-                                       
-    def _click_next(self, mouse, mouse_up):
-        if self.next_button and self.next_button.mouse_in_rect(mouse):
-            if mouse_up:
-                self.done = True
-            elif self.next_button.set_font(utils.GameFont("monospace", 20, (80,80,80))):
-                self.next_button.render()
-            return True
         
     def handle_event(self, event):
         if event.type == pygame.QUIT:
             self.next_situation_class = None
             self.done = True
-            self.python_quit = True
+            utils.python_quit = True
             self.log("Quit detected in Quiz")
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-            self._click(event.type==pygame.MOUSEBUTTONUP)
+            mouse = pygame.mouse.get_pos()
+            self.main_pane.event_click(mouse, event.type==pygame.MOUSEBUTTONUP)
             # TODO: trigger next situation...
         elif event.type==pygame.KEYDOWN:
-            if self.next_button and event.key in (pygame.K_n, pygame.K_RIGHT, pygame.K_SPACE):
-                self.done = True
-            elif event.key==pygame.K_a:
-                self._select(self.responses[0])
-            elif event.key==pygame.K_b:
-                self._select(self.responses[1])
-            elif event.key==pygame.K_c:
-                self._select(self.responses[2])
+            self.main_pane.event_key(event)
 
         
     def load_questions(self):
         records = utils.read_csv("InterviewQuiz.csv")
-        for rec in records:
-            if rec['Number']:
-                QuizSituation.questions[rec['Number']] = rec
+        QuizSituation.questions = dict([(rec['Number'], rec) for rec in records])
         
 class QuizSummarySituation(QuizSituationBase):
     def __init__(self, g):
@@ -471,10 +501,10 @@ class MapSituationBase(SituationBase):
         if event.type == pygame.QUIT:
             self.next_situation_class = None
             self.done = True
-            self.python_quit = True
+            utils.python_quit = True
             self.log("Quit detected in Quiz")
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-            self._click(event.type==pygame.MOUSEBUTTONUP)
+            self.event_click(event.type==pygame.MOUSEBUTTONUP)
             # TODO: trigger next situation...
         elif event.type==pygame.KEYDOWN:
             if event.key in self.key_handlers:
@@ -486,11 +516,12 @@ class MapSituationBase(SituationBase):
             self.move_size = BASE_MOVE_SIZE
             self.consec_keydowns = 0
     
-    def _click(self, mouse_up):
+    def event_click(self, mouse_up):
         mouse = pygame.mouse.get_pos()
-        # Does Nothing Now...
-        return            
-                
+        for p in self.panes:
+            if p.event_click(mouse, mouse_up):
+                return True
+        return False
     def event_key_done(self, event):
         self.done = True
            
@@ -509,9 +540,53 @@ class MapSituationBase(SituationBase):
     def event_key_right(self, event):
         self.map_pane.move(self.move_size, 0)
 
-class FirstMainMapSituation(MapSituationBase):
-    def __init__(self, g):
+
+class QuizMapSituation(MapSituationBase):
+    def __init__(self, g, csv_path):
         MapSituationBase.__init__(self, g)
+        self.FRAME_RATE = 22
+        self.log("Reading config %s" % csv_path)
+        self.scenes = dict([(rec['Number'], rec) for rec in utils.read_csv(csv_path)])
+        self.curr_scene = self.scenes['1']
+        
+        self.key_handlers[pygame.K_1] = self.event_response_one
+        self.key_handlers[pygame.K_2] = self.event_response_two
+        self.key_handlers[pygame.K_3] = self.event_response_three
+
+        self.render()
+        
+
+    def event_response_one(self, event):
+        self._event_response("A")   
+    def event_response_two(self, event):
+        self._event_response("B")   
+    def event_response_three(self, event):
+        self._event_response("C")   
+        
+    def _event_response(self, id):
+        next_scene = self.curr_scene['%s Next Number' % id]
+        if not next_scene or next_scene=='0':
+            self.done = True
+        else:
+            self.curr_scene = self.scenes[next_scene]
+            self.render()
+
+    def render(self):
+        self.main_pane = QuestionPane(self, 
+                                      400,
+                                      None, 
+                                      None,
+                                      self.curr_scene['Scenario'],
+                                      [(idx+1, self.curr_scene["Response %s" % c], "") for idx, c in enumerate("ABC")],
+                                      has_next=False)
+                                      
+        self.log("Q: %s" % self.curr_scene['Scenario'])
+        pygame.display.flip()
+
+        
+class FirstMainMapSituation(QuizMapSituation):
+    def __init__(self, g):
+        QuizMapSituation.__init__(self, g, "buildingonfire.csv")
         self.FRAME_RATE = 22
         self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
         self.next_situation_class = SecondMainMapSituation

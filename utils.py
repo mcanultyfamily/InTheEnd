@@ -5,6 +5,7 @@ import csv
 import pygame
 
 _verbosity = 1
+python_quit = False
 
 def _log(msg, verbosity=1):
     global _verbosity
@@ -178,19 +179,24 @@ class RadioButtons(object):
             button.draw()
 
 class ClickableText(object):
-    def __init__(self, g, text, font, x, y, id=None):
+    def __init__(self, g, text, font, x, y, id=None, width=None):
         self.g = g
         self.id = id
         self.text = text
         self.font = font
         self.x, self.y = x, y
+        self.width = width
         self.render()
         
     def render(self):
         text = self.text
         if self.id:
             text = "%s. %s" % (self.id, text)
-        text, self.rect = self.g.render_text(text, self.font, self.x, self.y)
+        
+        if self.width:
+            text, self.rect = self.g.render_text_wrapped(text, self.font, self.x, self.y, self.width)
+        else:
+            text, self.rect = self.g.render_text(text, self.font, self.x, self.y)
         left = self.rect[0]-5
         top = self.rect[1]-5
         if hasattr(self.g, "w"):
@@ -261,10 +267,16 @@ class GameBase(object):
     
     def render_text_wrapped(self, s, game_font, x, y, width, leading=2, bg=None):
         textlines = wrapline(s, game_font.font, width)
+        top = left = None
+        bottom = right = 0
         for line in textlines:
             text, textRect = self.render_text(line, game_font, x, y, bg=bg)
+            if left==None: left = textRect[0]
+            if top==None: top = textRect[1]
+            bottom = textRect[1]+textRect[3]
+            right = max(right, textRect[2])
             y += textRect[3]+leading
-        return y
+        return s, pygame.Rect(left, top, right-left, bottom-top)
         
     def quit(self):
         pygame.quit()
@@ -298,6 +310,9 @@ class Pane(object):
         x, y = self.offset(x, y)
         self.g.screen.blit(img, (x, y), area=area)
 
+    def event_click(self, mouse, mouse_up):
+        return False
+        
 class SituationBase(object):
     """Base class provides a loop that does some basic stuff"""
     def __init__(self, game_obj):
