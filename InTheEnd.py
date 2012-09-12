@@ -137,16 +137,27 @@ class QuizSituation(QuizSituationBase):
         if not QuizSituation.questions:
             self.load_questions()
         self.this_rec = QuizSituation.questions[q_num]
-        self.main_pane.blit(utils.load_image("InterviewGuyLarge.png"), (0,0))
+        self.main_pane.blit(utils.load_image("interview_room2.jpg"), (0, 0))
+        
+        interviewGuy = pygame.transform.smoothscale(utils.load_image("InterviewGuyLarge.png"), (117, 192));
+        self.main_pane.blit(interviewGuy, (10,10))
         self.log("Q: %s" % self.this_rec['Question'])
         black_font = utils.GameFont("monospace", 20, (0,0,0))
         self.unpressed_font = black_font
         self.pressed_font = utils.GameFont("monospace", 20, (30,148,89))
-        self.main_pane.render_text(self.this_rec['Question'], black_font, 50, 50)
+        self.textx = 50
+        question_offset = 150
+        textlines = utils.wrapline(self.this_rec['Question'], black_font.font, self.main_pane.w - self.textx - 10 - question_offset)
+        y = 75
+        for text in textlines:
+            self.main_pane.render_text(text, black_font, self.textx + question_offset, y)
+            y += 20
+        
+        self.texty = 200
         self.responses = []
-        self.init_response("A", 50, 100)
-        self.init_response("B", 50, 130)
-        self.init_response("C", 50, 160)
+        self.init_response("A",  self.textx, self.texty + 50)
+        self.init_response("B",  self.textx, self.texty + 80)
+        self.init_response("C",  self.textx, self.texty + 110)
         self.answer = None
         self.next_button = None
         self.python_quit = False
@@ -195,11 +206,16 @@ class QuizSituation(QuizSituationBase):
             self.log("mouse up %s" % answer.text)
             self.answer = answer
             if answer.reply:
-                self.main_pane.render_text(answer.reply, utils.GameFont("monospace", 20, (153,128,18)), 50, 200)
+                mono_font = utils.GameFont("monospace", 20, (153, 128, 18))
+                textlines = utils.wrapline(answer.reply, mono_font.font, self.main_pane.w - self.textx - 10)
+                y = self.texty + 140
+                for text in textlines:
+                    self.main_pane.render_text(text, mono_font,  self.textx, y)
+                    y += 20
             self.g.add_quiz_answer(self.this_rec['Question'], answer.text)
             self.next_button = utils.ClickableText(self.main_pane, "Next",
                                        utils.GameFont("monospace", 20, (0,0,0)), 
-                                       200,250)
+                                       200,self.texty + 200)
                                        
     def _click_next(self, mouse, mouse_up):
         if self.next_button.mouse_in_rect(mouse):
