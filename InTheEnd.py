@@ -9,6 +9,7 @@ WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 500
 
 class ClockPane(utils.Pane):
+    end_time = None # End-Time survives multiple ClockPanes...
     def __init__(self, sit):
         utils.Pane.__init__(self, sit, 600, 0, 800, 30, (0,0,0))   
         self.clock_ticking = False
@@ -18,7 +19,7 @@ class ClockPane(utils.Pane):
         self.render_text(time_str, utils.GameFont("monospace", 22, (255, 40, 40)), 10, 2)
     
     def start_clock(self, seconds):
-        self.endtime = datetime.datetime.now()+datetime.timedelta(seconds=seconds)
+        ClockPane.endtime = datetime.datetime.now()+datetime.timedelta(seconds=seconds)
         self.clock_ticking = True
         self.tick()
     
@@ -27,7 +28,7 @@ class ClockPane(utils.Pane):
         
     def tick(self):
         if self.clock_ticking:
-            time_left = str(self.endtime-datetime.datetime.now())[:-2]
+            time_left = str(ClockPane.endtime-datetime.datetime.now())[:-2]
             self.set_time(time_left)
         
 
@@ -243,7 +244,7 @@ class QuizSituation(QuizSituationBase):
             self._click(event.type==pygame.MOUSEBUTTONUP)
             # TODO: trigger next situation...
         elif event.type==pygame.KEYDOWN:
-            if event.key==pygame.K_n and self.next_button:
+            if self.next_button and event.key in (pygame.K_n, pygame.K_RIGHT, pygame.K_SPACE):
                 self.done = True
             elif event.key==pygame.K_a:
                 self._select(self.responses[0])
@@ -280,6 +281,7 @@ class QuizSummarySituation(QuizSituationBase):
         self.next_situation_class = FirstMainMapSituation
         self.key_down_enabled_after = time.time()+0.2
         self.done = False
+
         
     def handle_event(self, event):
         if event.type == pygame.QUIT:
@@ -404,7 +406,6 @@ class MapPane(utils.Pane):
         a, b = x, y
         x = x-self.x_offset
         y = y-self.y_offset
-        print "MOUSE TO PANE : %s, %s -> %s, %s" % (a, b, x, y)
         return x, y
     
     def pane_to_map(self, x, y):
@@ -412,7 +413,6 @@ class MapPane(utils.Pane):
         v_rect = self._calc_visible_rect()
         x = v_rect[0]+x
         y = v_rect[1]+y
-        print "PANE TO MAP : %s, %s -> %s, %s (%s)" % (a, b, x, y, v_rect)
         return x, y
     
     def mouse_to_map(self, x, y):
@@ -427,7 +427,6 @@ class MapPane(utils.Pane):
         left = max(0, self.curr_x-(self.w/2))
         right = min(self.map_w, left+self.w-1)
         left = right-self.w
-        print "CVR: %s, %s -> %s, %s" % (self.curr_x, self.curr_y, left, top)
         return pygame.Rect(left, top, self.w, self.h)
 
     def move(self, dx, dy):
@@ -460,13 +459,14 @@ class MapSituationBase(SituationBase):
         self.key_handlers[pygame.K_a] = self.key_handlers[pygame.K_LEFT] = self.event_key_left
         self.key_handlers[pygame.K_s] = self.key_handlers[pygame.K_DOWN] = self.event_key_down
         self.key_handlers[pygame.K_d] = self.key_handlers[pygame.K_RIGHT] = self.event_key_right
-        self.key_handlers[pygame.K_q] = self.key_handlers[pygame.K_ESCAPE] = self.event_key_done
+        self.key_handlers[pygame.K_q] = self.key_handlers[pygame.K_ESCAPE] = self.key_handlers[pygame.K_n] = self.event_key_done
         
         self.move_back_allowed = False
         self.cant_move_back_sound = pygame.mixer.Sound("default_cant_move_back.wav")
         self.map_pane.set_location_by_name("Home")
         self.map_pane.render_visible()
-        
+        self.panes['CLOCK'].clock_ticking = True
+
     def handle_event(self, event):
         if event.type == pygame.QUIT:
             self.next_situation_class = None
@@ -514,8 +514,11 @@ class FirstMainMapSituation(MapSituationBase):
         MapSituationBase.__init__(self, g)
         self.FRAME_RATE = 22
         self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
-
-
+        self.next_situation_class = SecondMainMapSituation
+        
+class SecondMainMapSituation(MapSituationBase):
+    pass
+    
 # TODO: layout blocks...
 
 class InTheEndGame(utils.GameBase):

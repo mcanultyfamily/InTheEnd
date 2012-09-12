@@ -334,6 +334,7 @@ class SituationBase(object):
             self.next_situation_class = None
             self.done = True
         elif event.type==pygame.KEYDOWN:
+            self.log("Generic KEYDOWN Event")
             self.done = True
     
     def do_stuff_before_display(self):
@@ -394,7 +395,7 @@ def wrap_multi_line(text, font, maxwidth):
 def main(game_class):
     gc = game_class()
     sit = gc._first_situation()
-    _log("first sit: %s" % sit.__class__.__name__)
+    _log("first sit: %s" % sit.__class__.__name__, verbosity=2)
     while sit:
         sit = sit.run()
     gc.quit()
