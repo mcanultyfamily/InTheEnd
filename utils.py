@@ -1,11 +1,13 @@
 import sys
 import os
 import time
+import csv
 import pygame
 
 _verbosity = 1
 
 def _log(msg, verbosity=1):
+    global _verbosity
     if verbosity<=_verbosity:
         print msg
 
@@ -43,6 +45,19 @@ class GameFont(object):
         self.font = _font_cache[key]
 
 
+def read_csv(file_name):       
+    records = []
+    f = open(file_name, "rU")
+    try:
+        reader = csv.reader(f)
+        header = reader.next()
+        for row in reader:
+            rec = dict(map(None, header, row))
+            records.append(rec)
+    finally:
+        f.close()
+    return records
+    
 class Button(object):
     def __init__(self, g, normal_image, pressing_image, pressed_image, x, y, name):
         self.g = g
@@ -119,7 +134,6 @@ class SpriteSheet(object):
 
     def image_at_index(self, row, col, w, h, colorkey=None):
         rect = (col*w, row*h, (col*w)+w, (row*h)+h)
-        print "RECT:", rect, self.sheet.get_rect()
         return self.image_at(rect, colorkey)
     
 class RadioButtons(object):
@@ -202,6 +216,8 @@ class GameBase(object):
             if a=='--debug':
                 _verbosity = 2
                 _log("debug enabled")
+            elif a=='--quiet':
+                _verbosity = 0
             elif a.startswith("--jump-to="):
                 self.jump_to = a.split("=",1)[-1]
         
@@ -211,11 +227,9 @@ class GameBase(object):
     
     def _first_situation(self):
         if self.jump_to:
-            _log("JUMPING TO SITUATION: %s" % self.jump_to)
             calling_module = __import__("__main__")
-            print calling_module
             cls = getattr(calling_module, self.jump_to)
-            print cls
+            _log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, cls.__class__.__name__))
             return cls(self)
         else:
             return self.first_situation()

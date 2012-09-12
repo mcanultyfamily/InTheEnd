@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import time
 import datetime
-import csv
 import random
 import pygame
 import utils
@@ -222,16 +221,10 @@ class QuizSituation(QuizSituationBase):
 
         
     def load_questions(self):
-        f = open("InterviewQuiz.csv", "rU")
-        try:
-            reader = csv.reader(f)
-            header = reader.next()
-            for row in reader:
-                rec = dict(map(None, header, row))
-                if rec['Number']:
-                    QuizSituation.questions[rec['Number']] = rec
-        finally:
-            f.close()
+        records = utils.read_csv("InterviewQuiz.csv")
+        for rec in records:
+            if rec['Number']:
+                QuizSituation.questions[rec['Number']] = rec
         
 class QuizSummarySituation(QuizSituationBase):
     def __init__(self, g):
@@ -268,15 +261,42 @@ class QuizSummarySituation(QuizSituationBase):
     
 
 class MapElem(object):
-    def __init__(self, surface, name, rect, color):
+    shape_funcs = {}
+    def __init__(self, surface, rec):
+        if not MapElem.shape_funcs:
+            MapElem.shape_funcs = {"rect":MapElem.draw_rect,
+                                   "ellipse":MapElem.draw_ellipse,
+                                   "triangle":MapElem.draw_triangle,}
+    
         self.surface = surface
-        self.name = name
-        self.rect = pygame.Rect(rect[0],rect[1],rect[2],rect[3])
-        self.color = color
+        self.rec = rec
+        self.name = rec['Name']
+        self.left, self.top, self.width, self.height = [int(self.rec[k]) for k in ['Left', 'Top', 'Width', 'Height']]
+        if rec['Image File']:
+            self.image = utils.load_image(rec['Image File'])
+            self.width, self.height = self.image.get_size()
+        else:
+            color = eval("(%s)" % self.rec['Color'])
+            self.image = pygame.Surface((self.width, self.height))
+            self.shape_funcs[rec['Shape']](self, color)
+    
         
+    def draw_rect(self, color):
+        rect = pygame.Rect(0, 0, self.width, self.height)
+        pygame.draw.rect(self.image, color, rect)
+    
+    def draw_ellipse(self, color):
+        rect = pygame.Rect(0, 0, self.width, self.height)
+        pygame.draw.ellipse(self.image, color, rect)
+
+    def draw_triangle(self, color):
+        rect = pygame.Rect(0, 0, self.width, self.height)
+        points = [(0, self.height), (self.width/2, 0), (self.width, self.height), (0, self.height)]
+        pygame.draw.polygon(self.image, color, points)
+
     def render(self):
-        width = 3
-        pygame.draw.rect(self.surface, self.color, self.rect, width)
+        
+        self.surface.blit(self.image, (self.left, self.top))
     
 class MapPane(utils.Pane):
     def __init__(self, sit):
@@ -285,13 +305,13 @@ class MapPane(utils.Pane):
         map_size = self.whole_map_image.get_size()
         self.map_w, self.map_h = map_size
         self.whole_map = pygame.Surface(map_size).convert()
-        print "MAP SIZE: %s", map_size
         
         # TODO: load in map elements...
         self.elems = []
         self.elems_by_xy = []
         self.elems_by_name = {}
-        self.add_element("Home", (240, 1230, 265, 1260), (0,255,0), sort_xy=False)
+        for rec in utils.read_csv("map_data.csv"):
+            self.add_element(rec, sort_xy=False)
         self.elems_by_xy.sort()        
         self.render_whole_map()
     
@@ -308,15 +328,15 @@ class MapPane(utils.Pane):
     
     def set_location_by_name(self, name):
         elem = self.elems_by_name[name]
-        x, y = elem.rect.center
+        x = elem.left+(elem.width/2)
+        y = elem.top+(elem.height/2)
         self.set_location_by_xy(x, y)
         
-    def add_element(self, name, loc_rect, color, sort_xy=True):
-        elem = MapElem(self.whole_map, name, loc_rect, color)
+    def add_element(self, rec, sort_xy=True):
+        elem = MapElem(self.whole_map, rec)
         self.elems.append(elem)
-        x, y = loc_rect[:2]
-        self.elems_by_xy.append((x, y, elem))
-        self.elems_by_name[name] = elem
+        self.elems_by_xy.append((elem.left, elem.top, elem))
+        self.elems_by_name[elem.name] = elem
         if sort_xy:
             self.elems_by_xy.sort()
 
@@ -354,11 +374,16 @@ class MapPane(utils.Pane):
         pygame.display.flip()
         end = (self.curr_x, self.curr_y)
         self.sit.log("MAP MOVE: %s -> %s" % (start, end), verbosity=2)
-        
+
+BASE_MOVE_SIZE = 5
+MOVE_SIZE_INCREMENT = 5
+MAX_MOVE_SIZE = 15
 class MapSituationBase(SituationBase):
     def __init__(self, g):
         SituationBase.__init__(self, g)
-        self.FRAME_RATE=50
+        self.FRAME_RATE = 50
+        self.move_size = BASE_MOVE_SIZE
+        self.consec_keydowns = 0
         
         self.panes['EVENT'] = utils.Pane(self, 0, 0, 400, 500, (180,180,180))
         self.panes['MAP'] = self.map_pane = MapPane(self)
@@ -386,21 +411,27 @@ class MapSituationBase(SituationBase):
         elif event.type==pygame.KEYDOWN:
             if event.key in self.key_handlers:
                 self.key_handlers[event.key](event)
-
+                self.consec_keydowns += 1
+                if not self.consec_keydowns%5:
+                    self.move_size = max(MAX_MOVE_SIZE, self.move_size+MOVE_SIZE_INCREMENT)
+        elif event.type==pygame.KEYUP:
+            self.move_size = BASE_MOVE_SIZE
+            self.consec_keydowns = 0
+            
     def event_key_done(self, event):
         self.done = True
            
     def event_key_up(self, event):
-        self.map_pane.move(0, -5)
+        self.map_pane.move(0, -self.move_size)
 
     def event_key_down(self, event):
-        self.map_pane.move(0, 5)
+        self.map_pane.move(0, self.move_size)
 
     def event_key_left(self, event):
-        self.map_pane.move(-5, 0)
+        self.map_pane.move(-self.move_size, 0)
         
     def event_key_right(self, event):
-        self.map_pane.move(5, 0)
+        self.map_pane.move(self.move_size, 0)
         
 class FirstMainMapSituation(MapSituationBase):
     def __init__(self, g):
