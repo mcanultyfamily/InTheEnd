@@ -152,20 +152,11 @@ class QuestionPane(utils.Pane):
         if (y < 200):
             y = 200        
         for id, response, reply in responses:
-<<<<<<< HEAD
-            ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
-            ct.reply = reply
-            self.responses.append(ct)
-            y += ct.rect[3]+5
-=======
             if (response):
-                print "A: %s, %s" % (x, y)
                 ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
                 ct.reply = reply
                 self.responses.append(ct)
-                print ct.rect
                 y += ct.rect[3]+5
->>>>>>> Building on fire tweaks
         
         self.text_y = y
         
