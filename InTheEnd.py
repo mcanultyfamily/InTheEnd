@@ -336,6 +336,7 @@ class MapElem(object):
         self.surface = surface
         self.rec = rec
         self.name = rec['Name']
+        
         self.left, self.top, self.width, self.height = [int(self.rec[k]) for k in ['Left', 'Top', 'Width', 'Height']]
         if rec['Image File']:
             self.image = utils.load_image(rec['Image File'])
@@ -376,7 +377,8 @@ class MapPane(utils.Pane):
         self.elems_by_xy = []
         self.elems_by_name = {}
         for rec in utils.read_csv("map_data.csv"):
-            self.add_element(rec, sort_xy=False)
+            if rec['Visibility']:
+                self.add_element(rec, sort_xy=False)
         self.elems_by_xy.sort()        
         self.render_whole_map()
     
