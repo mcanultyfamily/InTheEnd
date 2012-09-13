@@ -140,17 +140,23 @@ class QuestionPane(utils.Pane):
         self.unpressed_font = black_font
         self.pressed_font = utils.GameFont("monospace", 20, (30,148,89))
 
-        self.text_x = x = 150
-        y = 75
+        if (width > 500):
+            self.text_x = x = 150
+            y = 75
+        else:
+            self.text_x = x = 10
+            y = 25
         width = self.width-(20+x)
         ignored, rect = self.render_text_wrapped(desc, black_font, x, y, width)
-
-        y = 200        
+        y += rect[3]
+        if (y < 200):
+            y = 200        
         for id, response, reply in responses:
-            ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
-            ct.reply = reply
-            self.responses.append(ct)
-            y += ct.rect[3]+5
+            if (response):
+                ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
+                ct.reply = reply
+                self.responses.append(ct)
+                y += ct.rect[3]+5
         
         self.text_y = y
         
