@@ -120,13 +120,13 @@ class SecondNewspaperSituation(SpinImageSituation):
 
 
 class QuestionPane(utils.Pane):
-    def __init__(self, sit, width, background, picture, desc, responses, has_next):
+    def __init__(self, sit, width, background, picture, desc, responses, show_next):
         utils.Pane.__init__(self, sit, 0, 0, width, 500, (250,250,250))   
         self.background = background
         self.width = width
         self.picture = picture
         self.desc = desc
-        self.has_next = has_next
+        self.show_next = show_next
         self.next_button = None
         self.responses = []
         self.answer = None
@@ -200,7 +200,7 @@ class QuestionPane(utils.Pane):
             ignored, rect = self.render_text_wrapped(answer.reply, mono_font, self.reply_left, self.reply_top, self.reply_width)
             self.reply_height = rect[3]
 
-        if self.has_next and not self.next_button:
+        if self.show_next and not self.next_button:
             x = (self.width*2)/3
             y = 400
             self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
@@ -252,7 +252,7 @@ class QuizSituation(QuizSituationBase):
                                       interviewGuy,
                                       self.this_rec['Question'],
                                       [(c, self.this_rec["Response %s" % c], self.this_rec['Answer to %s' % c]) for c in "ABC"],
-                                      has_next=True)
+                                      show_next=True)
                                       
         self.log("Q: %s" % self.this_rec['Question'])
         pygame.display.flip()
@@ -571,13 +571,14 @@ class QuestionMapSituation(MapSituationBase):
             self.render()
 
     def render(self):
+        
         self.main_pane = QuestionPane(self, 
                                       400,
                                       None, 
                                       None,
                                       self.curr_scene['Scenario'],
                                       [(idx+1, self.curr_scene["Response %s" % c], "") for idx, c in enumerate("ABC")],
-                                      has_next=False)
+                                      show_next=True)
                                       
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
