@@ -48,7 +48,19 @@ def load_image(file_name, colorkey=None):
     return _image_cache[key]
 
 
-def read_csv(file_name): 
+def read_csv(file_name, slam_data={}): 
+    def _slam(v, d):
+        if not "{{" in v:
+            return v
+        pieces = []
+        for p in v.split("{{"):
+            if pieces:
+                key, end = p.split("}}")
+                key = key.strip()
+                p = "%s%s" % (slam_data.get(key, ""), end)                
+            pieces.append(p)
+        return ''.join(pieces)
+        
     file_name = filepath(file_name)
     records = []
     f = open(file_name, "rU")
@@ -56,7 +68,9 @@ def read_csv(file_name):
         reader = csv.reader(f)
         header = reader.next()
         for row in reader:
+            row = [_slam(r, slam_data) for r in row]
             rec = dict(map(None, header, row))
+            
             records.append(rec)
     finally:
         f.close()

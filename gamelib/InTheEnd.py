@@ -50,7 +50,6 @@ class SituationBase(utils.SituationBase):
         #self.panes['MAP'] = utils.Pane(self, 400, 0, 600, 500, (120,180,120))
         #self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
     
-        self.key_handlers = {}
         
         
     def display(self):
@@ -294,7 +293,7 @@ class QuizSituation(QuizSituationBase):
 
         
     def load_questions(self):
-        records = data.read_csv("InterviewQuiz.csv")
+        records = data.read_csv("InterviewQuiz.csv", self.g.game_data)
         QuizSituation.questions = dict([(rec['Number'], rec) for rec in records])
         
 class QuizSummarySituation(QuizSituationBase):
@@ -339,12 +338,13 @@ class QuestionSituation(SituationBase):
         SituationBase.__init__(self, g)
         self.FRAME_RATE = 22
         self.log("Reading config %s" % csv_path)
-        self.scenes = dict([(rec['Number'], rec) for rec in data.read_csv(csv_path)])
+        self.scenes = dict([(rec['Number'], rec) for rec in data.read_csv(csv_path, self.g.game_data)])
         self.curr_scene = self.scenes['1']
         
         self.key_handlers[pygame.K_1] = self.event_response_one
         self.key_handlers[pygame.K_2] = self.event_response_two
         self.key_handlers[pygame.K_3] = self.event_response_three
+        
         self.panes['CLOCK'].clock_ticking = True
         self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
 
@@ -404,6 +404,7 @@ class InTheEndGame(utils.GameBase):
         pygame.key.set_repeat(250, 50)
         self.quiz_answers = []
         self.quiz_by_q = {}
+        self.game_data = {}
     
     def add_quiz_answer(self, q, a):
         self.quiz_answers.append([q, a])
@@ -411,6 +412,11 @@ class InTheEndGame(utils.GameBase):
 
     def first_situation(self):
         return FirstNewspaperSituation(self)
+
+    def _jump_to_situation(self):
+        cls = globals()[self.jump_to]
+        utils._log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, cls.__class__.__name__))
+        return cls(self)
 
     def help(self):
          print """

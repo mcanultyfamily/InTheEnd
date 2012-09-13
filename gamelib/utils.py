@@ -1,7 +1,6 @@
 import sys
 import os
 import time
-import csv
 import pygame
 
 import data
@@ -219,13 +218,15 @@ class GameBase(object):
     
     def _first_situation(self):
         if self.jump_to:
-            calling_module = __import__("__main__")
-            cls = getattr(calling_module, self.jump_to)
-            _log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, cls.__class__.__name__))
-            return cls(self)
+            return self._jump_to_situation()
         else:
             return self.first_situation()
 
+    def _jump_to_situation(self):
+        calling_module = __import__("__main__")
+        cls = getattr(calling_module, self.jump_to)
+        _log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, cls.__class__.__name__))
+        return cls(self)
         
     def render_text(self, s, game_font, x, y, bg=None):
         antialias = True
@@ -294,7 +295,9 @@ class SituationBase(object):
         self.next_situation_class = None
         self.done = False
         self.log("init")
-    
+        self.key_handlers = {}
+        self.consec_keydowns = 0
+        
     def log(self, msg, verbosity=2):
         _log("%s: %s" % (self.__class__.__name__, msg), verbosity=verbosity)
         
@@ -317,13 +320,20 @@ class SituationBase(object):
         return not self.done
         
     def handle_event(self, event):
+        global python_quit
         if event.type == pygame.QUIT:
-            self.log("Quit detected in utils")
             self.next_situation_class = None
             self.done = True
+            python_quit = True
+        elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            mouse = pygame.mouse.get_pos()
+            self.event_click(mouse, event.type==pygame.MOUSEBUTTONUP)
         elif event.type==pygame.KEYDOWN:
-            self.log("Generic KEYDOWN Event")
-            self.done = True
+            if event.key in self.key_handlers:
+                self.consec_keydowns += 1
+                self.key_handlers[event.key](event)
+        elif event.type==pygame.KEYUP:
+            self.consec_keydowns += 1
     
     def do_stuff_before_display(self):
         pass
