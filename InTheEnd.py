@@ -143,19 +143,15 @@ class QuestionPane(utils.Pane):
         self.text_x = x = 150
         y = 75
         width = self.width-(20+x)
-        print "Q: %s, %s" % (x, y)
         ignored, rect = self.render_text_wrapped(desc, black_font, x, y, width)
 
         y = 200        
         for id, response, reply in responses:
-            print "A: %s, %s" % (x, y)
             ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
             ct.reply = reply
             self.responses.append(ct)
-            print ct.rect
             y += ct.rect[3]+5
         
-        print "BOT: %s, %s" % (x, y)
         self.text_y = y
         
     def event_click(self, mouse, mouse_up):
@@ -185,12 +181,13 @@ class QuestionPane(utils.Pane):
             return False
             
     def select(self, answer):
-        if self.answer and self.answer.reply:
+        if self.answer:
             self.answer.set_font(self.unpressed_font)
             self.answer.render()
-            # TODO - I think this can move into render_text_wrapped(...bg=)
-            area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
-            self.blit(self.background, (self.reply_left, self.reply_top), area=area)
+            if self.answer.reply:
+                # TODO - I think this can move into render_text_wrapped(...bg=)
+                area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
+                self.blit(self.background, (self.reply_left, self.reply_top), area=area)
         self.answer = answer
         self.answer.set_font(self.pressed_font)
         self.answer.render()
@@ -618,7 +615,12 @@ class InTheEndGame(utils.GameBase):
     def first_situation(self):
         return FirstNewspaperSituation(self)
 
+    def help(self):
+         print """
+         --jump-to=FirstMainMapSituation
+         --jump-to=FirstMainMapSituation
+         --jump-to=SecondMainMapSituation
+        """
         
-
 if __name__ == '__main__':
     utils.main(InTheEndGame)

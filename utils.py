@@ -220,9 +220,9 @@ class ClickableText(object):
         
 class GameBase(object):
     def __init__(self):
+        self.get_options()
         pygame.init()
         self.clock = pygame.time.Clock()
-        self.get_options()
     
     def init_display(self, display_size, display_mode):
         self.screen = pygame.display.set_mode(display_size, display_mode)
@@ -239,7 +239,12 @@ class GameBase(object):
                 _verbosity = 0
             elif a.startswith("--jump-to="):
                 self.jump_to = a.split("=",1)[-1]
+            elif a=='--help':
+                self.help()
+                sys.exit(0)
         
+    def help(self):
+        "This would be help..."
         
     def first_situation(self):
         return None
