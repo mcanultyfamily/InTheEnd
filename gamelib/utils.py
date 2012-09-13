@@ -4,6 +4,8 @@ import time
 import csv
 import pygame
 
+import data
+
 _verbosity = 1
 python_quit = False
 
@@ -12,29 +14,8 @@ def _log(msg, verbosity=1):
     if verbosity<=_verbosity:
         print msg
 
-class Cache(dict):
-    pass    
-    
 
-_image_cache = Cache()
-def load_image(file_name, colorkey=None):
-    key = (file_name, colorkey)
-    if not key in _image_cache:
-        fullname = os.path.join(file_name)
-        try:
-            image = pygame.image.load(fullname)
-        except pygame.error, message:
-            print 'Cannot load image:', fullname
-            raise SystemExit, message
-        image = image.convert()
-        if colorkey is not None:
-            if colorkey is -1:
-                colorkey = image.get_at((0,0))
-            image.set_colorkey(colorkey, RLEACCEL)
-        _image_cache[key] = image
-    return _image_cache[key]
-
-_font_cache = Cache()
+_font_cache = data.Cache()
 class GameFont(object):
     def __init__(self, name, size, color):
         self.name = name
@@ -45,19 +26,6 @@ class GameFont(object):
             _font_cache[key] = pygame.font.SysFont(name, size, True, False)
         self.font = _font_cache[key]
 
-
-def read_csv(file_name):       
-    records = []
-    f = open(file_name, "rU")
-    try:
-        reader = csv.reader(f)
-        header = reader.next()
-        for row in reader:
-            rec = dict(map(None, header, row))
-            records.append(rec)
-    finally:
-        f.close()
-    return records
     
 class Button(object):
     def __init__(self, g, normal_image, pressing_image, pressed_image, x, y, name):

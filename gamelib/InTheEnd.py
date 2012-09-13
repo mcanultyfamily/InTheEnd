@@ -4,6 +4,7 @@ import datetime
 import random
 import pygame
 import utils
+import data
 
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 500
@@ -62,7 +63,7 @@ class SpinImageSituation(SituationBase):
         self.next_situation_class = next_situation_class
         self.FRAME_RATE = spin_rate
         self.ROTATE_INCREMENT = 5
-        self.base_image = utils.load_image(image_file)
+        self.base_image = data.load_image(image_file)
         self.base_center = self.base_image.get_rect().center
         self.main_pane = self.panes['PAPER'] = utils.Pane(self, 0, 0, 600, 500, (255, 255, 255))
         self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
@@ -236,7 +237,7 @@ class QuizSituationBase(SituationBase):
         SituationBase.__init__(self, g)
         self.FRAME_RATE = 5
         self.panes['BADGE'] = utils.Pane(self, 600, 30, 800, 230, (255,255,255))
-        badge = utils.load_image("fbi_badge.png")
+        badge = data.load_image("fbi_badge.png")
         self.panes['BADGE'].blit(badge, (0,0))
         self.panes['CLOCK'].set_time("Oct. 3, 2407")
 
@@ -252,8 +253,8 @@ class QuizSituation(QuizSituationBase):
         if not QuizSituation.questions:
             self.load_questions()
         self.this_rec = QuizSituation.questions[q_num]
-        background_image = utils.load_image("interview_room2.jpg")
-        interviewGuy = pygame.transform.smoothscale(utils.load_image("InterviewGuyLarge.png"), (117, 192));
+        background_image = data.load_image("interview_room2.jpg")
+        interviewGuy = pygame.transform.smoothscale(data.load_image("InterviewGuyLarge.png"), (117, 192));
 
         self.main_pane = QuestionPane(self, 
                                       600,
@@ -293,7 +294,7 @@ class QuizSituation(QuizSituationBase):
 
         
     def load_questions(self):
-        records = utils.read_csv("InterviewQuiz.csv")
+        records = data.read_csv("InterviewQuiz.csv")
         QuizSituation.questions = dict([(rec['Number'], rec) for rec in records])
         
 class QuizSummarySituation(QuizSituationBase):
@@ -338,7 +339,7 @@ class QuestionSituation(SituationBase):
         SituationBase.__init__(self, g)
         self.FRAME_RATE = 22
         self.log("Reading config %s" % csv_path)
-        self.scenes = dict([(rec['Number'], rec) for rec in utils.read_csv(csv_path)])
+        self.scenes = dict([(rec['Number'], rec) for rec in data.read_csv(csv_path)])
         self.curr_scene = self.scenes['1']
         
         self.key_handlers[pygame.K_1] = self.event_response_one
