@@ -520,7 +520,7 @@ class MapSituationBase(SituationBase):
     
     def event_click(self, mouse_up):
         mouse = pygame.mouse.get_pos()
-        for p in self.panes:
+        for p in self.panes.values():
             if p.event_click(mouse, mouse_up):
                 return True
         return False
@@ -543,7 +543,7 @@ class MapSituationBase(SituationBase):
         self.map_pane.move(self.move_size, 0)
 
 
-class QuizMapSituation(MapSituationBase):
+class QuestionMapSituation(MapSituationBase):
     def __init__(self, g, csv_path):
         MapSituationBase.__init__(self, g)
         self.FRAME_RATE = 22
@@ -586,9 +586,9 @@ class QuizMapSituation(MapSituationBase):
         pygame.display.flip()
 
         
-class FirstMainMapSituation(QuizMapSituation):
+class FirstMainMapSituation(QuestionMapSituation):
     def __init__(self, g):
-        QuizMapSituation.__init__(self, g, "buildingonfire.csv")
+        QuestionMapSituation.__init__(self, g, "buildingonfire.csv")
         self.FRAME_RATE = 22
         self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
         self.next_situation_class = SecondMainMapSituation
