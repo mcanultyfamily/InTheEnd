@@ -192,7 +192,7 @@ class GameBase(object):
         self.get_options()
         pygame.init()
         self.clock = pygame.time.Clock()
-    
+        
     def init_display(self, display_size, display_mode):
         self.screen = pygame.display.set_mode(display_size, display_mode)
     
@@ -208,6 +208,9 @@ class GameBase(object):
         self.opt_parser.add_option("--debug", action='store_true', dest='debug')
         self.opt_parser.add_option("--quiet", action='store_true', dest='quiet')
         self.opt_parser.add_option("--jump-to", action='store', default="", dest='jump_to')
+        self.opt_parser.add_option("--record", action='store', default="", dest='record_to')
+        self.opt_parser.add_option("--playback", action='store', default="", dest='playback_from')
+        self.opt_parser.add_option("--playback-rate", action='store', type=float, default=1.0, dest='playback_rate')
     
     def make_opt_epilog(self):
         return None
@@ -219,15 +222,22 @@ class GameBase(object):
         
         self.init_options()
         
-        options, args = self.opt_parser.parse_args()    
+        self.cli_options, self.cli_args = self.opt_parser.parse_args()    
         
-        if options.debug:
+        if self.cli_options.debug:
             _verbosity = 2
-        if options.quiet:
+        if self.cli_options.quiet:
             _verbosity = 0
-            
-        self.jump_to = options.jump_to
-        return options, args
+        
+        self.playback_events = []
+        if self.cli_options.playback_from:
+            self.playback_events = data.read_playback_events(self.cli_options.playback_from, self.cli_options.playback_rate)
+            print "Loaded %s playback events" % len(self.playback_events)
+        elif self.cli_options.record_to:
+            print "Recording enabled to %r" % self.cli_options.record_to
+            data.start_recording(self.cli_options.record_to)
+        self.jump_to = self.cli_options.jump_to
+        return self.cli_options, self.cli_args
         
     def first_situation(self):
         return None
@@ -324,14 +334,27 @@ class SituationBase(object):
         
     def log(self, msg, verbosity=2):
         _log("%s: %s" % (self.__class__.__name__, msg), verbosity=verbosity)
-        
+    
+    def get_events(self):
+        if self.g.playback_events:
+            events = []
+            now = time.time()
+            while self.g.playback_events and self.g.playback_events[0][0]<now:
+                tick, event = self.g.playback_events.pop(0)
+                events.append(event)
+            return events
+        else:
+            return pygame.event.get()
+
     def run(self):
         start = time.time()
         ticks = 0
         while self.still_running():
             self.g.clock.tick(self.FRAME_RATE)
             ticks += 1
-            for event in pygame.event.get():
+            for event in self.get_events():
+                if self.g.cli_options.record_to:
+                    data.record_event(event)            
                 self.handle_event(event)
             self.do_stuff_before_display()
             self.display()

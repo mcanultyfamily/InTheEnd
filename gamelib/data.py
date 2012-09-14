@@ -8,6 +8,8 @@ Enhancing this to handle caching etc. is left as an exercise for the reader.
 import os
 import csv
 import pygame
+import time
+import atexit
 
 data_py = os.path.abspath(os.path.dirname(__file__))
 data_dir = os.path.normpath(os.path.join(data_py, '..', 'data'))
@@ -75,3 +77,44 @@ def read_csv(file_name, slam_data={}):
     finally:
         f.close()
     return records
+
+def read_playback_events(filename, playback_rate):
+    f = open(filename)
+    events = []
+    start_time = time.time()
+    for line in f:
+        tick, e_kind, e_dict = eval(line)
+        tick = tick/playback_rate
+        events.append((start_time+tick, pygame.event.Event(e_kind, e_dict)))
+    
+    f.close()
+    return events
+
+_recording_start_time = None
+_recording_file = None
+def start_recording(filename):
+    global _recording_file, _last_recording_tick
+    _recording_start_time = time.time()
+    _recording_file = open(filename, "w")
+    atexit.register(_close_recording)
+    
+def _close_recording():
+    global _recording_file, _last_recording_tick
+    if _recording_file:
+        _recording_file.flush()
+        _recording_file.close()
+        _recording_file = None
+        _recording_start_time = None
+        
+def record_event(event):
+    global _recording_file, _recording_start_time
+    if _recording_file:
+        now = time.time()
+        tick = now-_recording_start_time
+        e_str = str(event).replace("<Event(", "").replace(")>", "")
+        e_kind = e_str.split("-", 1)[0]
+        e_dict = e_str.split("{", 1)[-1]
+        e_str = "%s, {%s" % (e_kind, e_dict)
+        #print event, '->', e_str
+        _recording_file.write("%s, %s\n" % (tick, e_str))
+        _recording_file.flush()

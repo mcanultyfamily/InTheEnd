@@ -412,7 +412,7 @@ class QuestionSituation(SituationBase):
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
 
-_main_situations = ['buildingonfire.csv', 'religionnuts.csv', 'motherandchild.csv']
+_main_situations = ['buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
 
 
 class MainSituation(QuestionSituation):
@@ -428,6 +428,7 @@ class MainSituation(QuestionSituation):
         self.next_situation_class = MainSituation
 
     def get_next_situation(self):
+        global _main_situations
         if _main_situations:
             sit = _main_situations[0]
             _main_situations = _main_situations[1:]
@@ -463,6 +464,7 @@ class InTheEndGame(utils.GameBase):
             random.shuffle(_main_situations)
             
     def make_opt_epilog(self):
+        global _main_situations
         situation_jump_tos = "\n".join(["        %s" % jt for jt in _main_situations+['finalsituation.csv']])
         return """
     Valid Jump-Tos Are:
