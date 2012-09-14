@@ -275,17 +275,24 @@ class Pane(object):
     def render_text_wrapped(self, text, font, x, y, width, bg=None):
         return self.g.render_text_wrapped(text, font, self.x_offset+x, self.y_offset+y, width, bg=bg)
 
-    def offset(self, x, y):
-        return self.x_offset+x, self.y_offset+y
+    def window_to_pane_xy(self, x, y):
+        return x-self.x_offset, y-self.y_offset
+
+    def pane_to_window_xy(self, x, y):
+        return x+self.x_offset, y+self.y_offset
         
     def blit(self, img, topleft, area=None):
         _log("PANE BLIT: %s, %s" % (topleft, area), verbosity=3)
         x, y = topleft
-        x, y = self.offset(x, y)
+        x, y = self.pane_to_window_xy(x, y)
         self.g.screen.blit(img, (x, y), area=area)
 
     def event_click(self, mouse, mouse_up):
-        return False
+        return self.mouse_in_pane(mouse)
+    
+    def mouse_in_pane(self, mouse):
+        x, y = mouse
+        return x>self.x_offset and y>self.y_offset and x<(self.x_offset+self.w) and y<(self.y_offset+self.h)
         
 class SituationBase(object):
     """Base class provides a loop that does some basic stuff"""
@@ -296,6 +303,7 @@ class SituationBase(object):
         self.done = False
         self.log("init")
         self.key_handlers = {}
+        self.key_handlers[pygame.K_ESCAPE] = self.event_quit
         self.consec_keydowns = 0
         
     def log(self, msg, verbosity=2):
@@ -338,10 +346,7 @@ class SituationBase(object):
     def handle_event(self, event):
         global python_quit
         if event.type == pygame.QUIT:
-            self.log("EVENT: QUIT")
-            self.next_situation_class = None
-            self.done = True
-            python_quit = True
+            self.event_quit(event)
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             mouse = pygame.mouse.get_pos()
             self.log("EVENT: CLICK - %s" % repr(mouse))
@@ -352,7 +357,13 @@ class SituationBase(object):
         elif event.type==pygame.KEYUP:
             self.log("EVENT: KEYUP - %s" % event.key)
             self.event_keyup(event)
-    
+
+    def event_quit(self, event):
+        self.log("EVENT: QUIT")
+        self.next_situation_class = None
+        self.done = True
+        python_quit = True
+
     def do_stuff_before_display(self):
         pass
         

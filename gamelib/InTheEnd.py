@@ -43,10 +43,20 @@ class SituationBase(utils.SituationBase):
         self.g.screen.blit(self.background, (0, 0)) 
         
         self.panes = {}
-        self.panes['CLOCK'] = ClockPane(self)
-        self.panes['STATUS'] = utils.Pane(self, 600, 230, 800, 500, (200,180,180))
-    
+        self.add_pane("CLOCK", ClockPane(self))
+        self.add_pane("STATUS", utils.Pane(self, 600, 230, 800, 500, (200,180,180)))
         
+    def add_pane(self, name, pane):
+        pane.name = name
+        self.panes[name] = pane
+        return pane
+    
+    def event_click(self, mouse, mouse_up):
+        self.log("SITUATION BASE EVENT CLICK")
+        for n, p in self.panes.items():
+            self.log("EVENT CLICK? : %s" % n)
+            if p.event_click(mouse, mouse_up):
+                return
         
     def display(self):
         self.panes['CLOCK'].tick()
@@ -60,8 +70,8 @@ class SpinImageSituation(SituationBase):
         self.ROTATE_INCREMENT = 5
         self.base_image = data.load_image(image_file)
         self.base_center = self.base_image.get_rect().center
-        self.main_pane = self.panes['PAPER'] = utils.Pane(self, 0, 0, 600, 500, (255, 255, 255))
-        self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
+        self.main_pane = self.add_pane("PAPER", utils.Pane(self, 0, 0, 600, 500, (255, 255, 255)))
+        self.add_pane("MINIMAP", MapPane(self))
         self.panes['CLOCK'].set_time(time_text)
         self.current_angle = 0
         self.rotations_left = rotations
@@ -252,14 +262,12 @@ class QuizSituation(QuizSituationBase):
         background_image = data.load_image("interview_room2.jpg")
         interviewGuy = pygame.transform.smoothscale(data.load_image("InterviewGuyLarge.png"), (117, 192));
 
-        self.main_pane = QuestionPane(self, 
-                                      600,
-                                      background_image, 
+        p = QuestionPane(self, 600, background_image, 
                                       interviewGuy,
                                       self.this_rec['Question'],
                                       [(c, self.this_rec["Response %s" % c], self.this_rec['Answer to %s' % c]) for c in "ABC"],
                                       show_next=True)
-                                      
+        self.main_pane = self.add_pane("MAIN", p)
         self.log("Q: %s" % self.this_rec['Question'])
         pygame.display.flip()
                 
@@ -277,10 +285,7 @@ class QuizSituation(QuizSituationBase):
 
     def event_key_any(self, event):
         pass
-        
-    def event_click(self, mouse, mouse_up):
-        self.main_pane.event_click(mouse, mouse_up)
-            
+                    
     def load_questions(self):
         records = data.read_csv("InterviewQuiz.csv", self.g.game_data)
         QuizSituation.questions = dict([(rec['Number'], rec) for rec in records])
@@ -289,7 +294,7 @@ class QuizSummarySituation(QuizSituationBase):
     def __init__(self, g):
         QuizSituationBase.__init__(self, g)
         
-        self.main_pane = utils.Pane(self, 0, 0, 600, 500, (255,255,255))
+        self.main_pane = self.add_pane("MAIN", utils.Pane(self, 0, 0, 600, 500, (255,255,255)))
         self.main_pane.render_text("This is you:", utils.GameFont("monospace", 30, (0, 0, 0)), 10, 10)        
         FONT_SIZE = 12
         y = 50
@@ -316,7 +321,20 @@ class QuizSummarySituation(QuizSituationBase):
         self.done = True
     
 
-
+class MapPane(utils.Pane):
+    def __init__(self, sit):
+        utils.Pane.__init__(self, sit, 600, 30, 800, 230, (140,180,160))
+        self.background = data.load_image("map1.png")
+        self.blit(self.background, (0, 0))
+    
+    def event_click(self, mouse, mouse_up):
+        if self.mouse_in_pane(mouse):
+            x, y = self.window_to_pane_xy(mouse[0], mouse[1])
+            self.sit.log("CLICKED MAP: %s, %s" % (x, y))
+            return True
+        else:
+            return False
+            
 class QuestionSituation(SituationBase):
     def __init__(self, g, csv_path):
         SituationBase.__init__(self, g)
@@ -330,7 +348,7 @@ class QuestionSituation(SituationBase):
         self.key_handlers[pygame.K_3] = self.event_response_three
         
         self.panes['CLOCK'].clock_ticking = True
-        self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
+        self.map_pane = self.add_pane("MINIMAP", MapPane(self))
         
         self.render()
         
@@ -343,8 +361,7 @@ class QuestionSituation(SituationBase):
         self._event_response("C")   
     
     def event_click(self, mouse, mouse_up):
-        self.log("QUESTIONSIT - event_click")
-        self.main_pane.event_click(mouse, mouse_up)
+        SituationBase.event_click(self, mouse, mouse_up)
         if self.main_pane.answer:
             NUM_ID_TO_ALPHA_ID = {1:'A', 2:'B', 3:'C'}
             self._event_response(NUM_ID_TO_ALPHA_ID[self.main_pane.answer.id])
@@ -363,14 +380,14 @@ class QuestionSituation(SituationBase):
 
     def render(self):
         
-        self.main_pane = QuestionPane(self, 
-                                      600,
-                                      None, 
-                                      None,
-                                      self.curr_scene['Scenario'],
-                                      [(idx+1, self.curr_scene["Response %s" % c], "") for idx, c in enumerate("ABC")],
-                                      show_next=False)
-                                      
+        p = QuestionPane(self, 
+                          600,
+                          None, 
+                          None,
+                          self.curr_scene['Scenario'],
+                          [(idx+1, self.curr_scene["Response %s" % c], "") for idx, c in enumerate("ABC")],
+                          show_next=False)
+        self.main_pane = self.add_pane("MAIN", p)                                      
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
 
@@ -399,7 +416,8 @@ class InTheEndGame(utils.GameBase):
         pygame.key.set_repeat(250, 50)
         self.game_data = {}
         self.quiz_answers = []
-    
+        self.possessions = []
+        
     def add_quiz_answer(self, q, a):
         self.game_data[q] = a
         self.quiz_answers.append([q,a])
