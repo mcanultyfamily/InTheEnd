@@ -416,25 +416,44 @@ _main_situations = ['buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.c
 
 
 class MainSituation(QuestionSituation):
-    def __init__(self, g, sit=None):
+    def __init__(self, g, sit_file=None):
         global _main_situations
-        if not sit:
-            sit = self.get_next_situation()
-        QuestionSituation.__init__(self, g, sit)
+        if not sit_file:
+            sit_file = get_next_situation_file()
+        QuestionSituation.__init__(self, g, sit_file)
         self.FRAME_RATE = 22
         
         self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
         self.next_situation_class = MainSituation
 
     def get_next_situation(self):
-        global _main_situations
-        if _main_situations:
-            sit = _main_situations.pop(0)
-        else:
-            sit = "finalsituation.csv"
-        return sit
+        return make_main_situation(self.g)
         
+class MainSituation_buildingonfire(MainSituation):
+    pass
+    
+def get_next_situation_file():
+    global _main_situations
+    if _main_situations:
+        sit = _main_situations.pop(0)
+    else:
+        sit = "finalsituation.csv"
+    return sit
 
+def make_main_situation(g, sit_file=None):
+    global _main_situations
+    if not sit_file:
+        sit_file = get_next_situation_file()
+    else:
+        _main_situations = [s for s in _main_situations if s!=sit_file]
+        
+    class_name = "MainSituation_%s" % sit_file.split(".csv")[0]
+    if class_name in globals():
+        cls = globals()[class_name]
+    else:
+        cls = MainSituation
+    return cls(g, sit_file)
+    
 # TODO: layout blocks...
 
 class InTheEndGame(utils.GameBase):
@@ -482,7 +501,7 @@ class InTheEndGame(utils.GameBase):
     def _jump_to_situation(self):
         print "_jump_to_situation: %r" % self.jump_to
         if self.jump_to.endswith(".csv"):
-            sit = MainSituation(self, sit=self.jump_to)
+            sit = make_main_situation(self, sit_file=self.jump_to)
         else:
             sit = globals()[self.jump_to]()
         utils._log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, sit.__class__.__name__))
