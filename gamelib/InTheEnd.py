@@ -169,7 +169,8 @@ class QuestionPane(utils.Pane):
         self.NextOnly = False
         #OK, now I want a Next Button
         if (found_response == False):
-            ct = utils.ClickableText(self, "Or press a key", self.unpressed_font, x, y, "Click Here", width)
+            self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
+      
             self.NextOnly = True
         self.text_y = y
         
