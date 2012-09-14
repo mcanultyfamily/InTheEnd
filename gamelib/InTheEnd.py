@@ -11,24 +11,28 @@ WINDOW_HEIGHT = 500
 
 class ClockPane(utils.Pane):
     end_time = None # End-Time survives multiple ClockPanes...
+    clock_ticking = False
     def __init__(self, sit):
         utils.Pane.__init__(self, sit, 600, 0, 800, 30, (0,0,0))   
-        self.clock_ticking = False
         
     def set_time(self, time_str):
         self.g.screen.blit(self.background, (self.x_offset, self.y_offset))
         self.render_text(time_str, utils.GameFont("monospace", 22, (255, 40, 40)), 10, 2)
     
-    def start_clock(self, seconds):
-        ClockPane.endtime = datetime.datetime.now()+datetime.timedelta(seconds=seconds)
-        self.clock_ticking = True
-        self.tick()
+    def start_clock(self, seconds, restart=False):
+        if restart:
+            ClockPane.clock_ticking = False
+            
+        if not ClockPane.clock_ticking:
+            ClockPane.endtime = datetime.datetime.now()+datetime.timedelta(seconds=seconds)
+            ClockPane.clock_ticking = True
+            self.tick()
     
     def stop_clock(self):
-        self.clock_ticking = False
+        ClockPane.clock_ticking = False
         
     def tick(self):
-        if self.clock_ticking:
+        if ClockPane.clock_ticking:
             time_left = str(ClockPane.endtime-datetime.datetime.now())[:-2]
             self.set_time(time_left)
         
@@ -165,9 +169,8 @@ class QuestionPane(utils.Pane):
         width = self.width-(20+x)
         ignored, rect = self.render_text_wrapped(desc, black_font, x, y, width)
         y += rect[3]
-        if (y < 200):
-            y = 200        
-        found_response = False;
+        y = min(200, y)
+
         for id, response, reply in responses:
             if (response):
                 ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
@@ -175,13 +178,9 @@ class QuestionPane(utils.Pane):
                 ct.id = id
                 self.responses.append(ct)
                 y += ct.rect[3]+5
-                found_response = True;
-        self.NextOnly = False
         #OK, now I want a Next Button
-        if (found_response == False):
+        if not self.responses:
             self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
-      
-            self.NextOnly = True
         self.text_y = y
         
     def event_click(self, mouse, mouse_up):
@@ -195,8 +194,9 @@ class QuestionPane(utils.Pane):
             return True
         
         # check for fake Next button
-        if (self.NextOnly):
+        if not self.responses:
             return True
+            
         # Check answers
         answer = None
         for ct in self.responses:
@@ -214,7 +214,7 @@ class QuestionPane(utils.Pane):
             return False
             
     def select(self, answer):
-        if (self.NextOnly):
+        if not self.responses:
             self.sit.done = True
             return
                     
@@ -246,24 +246,22 @@ class QuestionPane(utils.Pane):
     def _next_key(self, event):
         if self.next_button:
             self.sit.done = True
-            
-    def _select_A(self, event):
-        if (self.NextOnly):
-            self.select(0)
+
+    def _select(self, id):
+        if self.responses:
+            resp = self.responses[id]
         else:
-            self.select(self.responses[0])
+            resp = None
+        self.select(resp)
+        
+    def _select_A(self, event):
+        self._select(0)
         
     def _select_B(self, event):
-        if (self.NextOnly):
-            self.select(0)
-        else:
-            self.select(self.responses[1])
+        self._select(1)
         
     def _select_C(self, event):
-        if (self.NextOnly):
-            self.select(0)
-        else:
-            self.select(self.responses[2])
+        self._select(2)
 
 class QuizSituationBase(SituationBase):
     def __init__(self, g):
@@ -333,7 +331,7 @@ class QuizSummarySituation(QuizSituationBase):
                                        200,y+40)
         pygame.display.flip()
 
-        self.next_situation_class = FirstMainSituation
+        self.next_situation_class = MainSituation
         self.done = False
 
     
@@ -371,7 +369,6 @@ class QuestionSituation(SituationBase):
         self.key_handlers[pygame.K_2] = self.event_response_two
         self.key_handlers[pygame.K_3] = self.event_response_three
         
-        self.panes['CLOCK'].clock_ticking = True
         self.map_pane = self.add_pane("MINIMAP", MapPane(self))
         
         self.render()
@@ -415,29 +412,29 @@ class QuestionSituation(SituationBase):
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
 
-        
-class FirstMainSituation(QuestionSituation):
-    def __init__(self, g):
-        QuestionSituation.__init__(self, g, "buildingonfire.csv")
+_main_situations = ['buildingonfire.csv', 'religionnuts.csv', 'motherandchild.csv']
+
+
+class MainSituation(QuestionSituation):
+    def __init__(self, g, sit=None):
+        global _main_situations
+        print "MAIN SIT INIT %r" % sit
+        if not sit:
+            sit = self.get_next_situation()
+        QuestionSituation.__init__(self, g, sit)
         self.FRAME_RATE = 22
+        
         self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
-        self.next_situation_class = SecondMainSituation
+        self.next_situation_class = MainSituation
+
+    def get_next_situation(self):
+        if _main_situations:
+            sit = _main_situations[0]
+            _main_situations = _main_situations[1:]
+        else:
+            sit = "finalsituation.csv"
+        return sit
         
-class SecondMainSituation(QuestionSituation):
-    def __init__(self, g):
-        QuestionSituation.__init__(self, g, "religiousnuts.csv")
-        self.FRAME_RATE = 22
-        self.next_situation_class = ThirdMainSituation
-
-class ThirdMainSituation(QuestionSituation):
-    def __init__(self, g):
-        QuestionSituation.__init__(self, g, "motherandchild.csv")
-        self.FRAME_RATE = 22
-        self.next_situation_class = FinalMainSituation
-
-class FinalMainSituation(SituationBase):
-    def __init__(self, g):
-        pass
 
 # TODO: layout blocks...
 
@@ -455,24 +452,42 @@ class InTheEndGame(utils.GameBase):
         self.quiz_answers = []
         self.possessions = []
         
+    def init_options(self):
+        utils.GameBase.init_options(self)
+        self.opt_parser.add_option("--no-random", action='store_false', dest='randomize_events')
+    
+    def get_options(self):
+        options, args = utils.GameBase.get_options(self)
+        if options.randomize_events:
+            global _main_situations
+            random.shuffle(_main_situations)
+            
+    def make_opt_epilog(self):
+        situation_jump_tos = "\n".join(["        %s" % jt for jt in _main_situations+['finalsituation.csv']])
+        return """
+    Valid Jump-Tos Are:
+        FirstNewspaperSituation
+        SecondNewspaperSituation
+        QuizSituation
+        QuizSummarySituation
+%s""" % situation_jump_tos
+        
     def add_quiz_answer(self, q, a):
         self.game_data[q] = a
         self.quiz_answers.append([q,a])
 
     def first_situation(self):
-        return FirstNewspaperSituation(self)
+        return MainSituation(self)
 
     def _jump_to_situation(self):
-        cls = globals()[self.jump_to]
-        utils._log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, cls.__class__.__name__))
-        return cls(self)
-
-    def help(self):
-         print """
-         --jump-to=FirstMainSituation
-         --jump-to=FirstMainSituation
-         --jump-to=SecondMainSituation
-        """
+        print "_jump_to_situation: %r" % self.jump_to
+        if self.jump_to.endswith(".csv"):
+            sit = MainSituation(self, sit=self.jump_to)
+        else:
+            sit = globals()[self.jump_to]()
+        utils._log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, sit.__class__.__name__))
+        return sit
+        
         
 if __name__ == '__main__':
     utils.main(InTheEndGame)

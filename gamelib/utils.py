@@ -1,6 +1,8 @@
 import sys
 import os
 import time
+import optparse
+
 import pygame
 
 import data
@@ -193,25 +195,39 @@ class GameBase(object):
     
     def init_display(self, display_size, display_mode):
         self.screen = pygame.display.set_mode(display_size, display_mode)
+    
+    def init_options(self):
+        class MyParser(optparse.OptionParser):
+            def format_epilog(self, formatter):
+                if self.epilog and self.epilog[-1]!='\n':
+                    self.epilog = "%s\n" % self.epilog
+                return self.epilog
+    
+        self.opt_parser = MyParser(epilog=self.make_opt_epilog())
+        self.opt_parser.add_option("--verbosity", action='store', type=int, default=1, dest='verbosity', help='0=quiet, 1=normal, 2=verbose, 3=debug')
+        self.opt_parser.add_option("--debug", action='store_true', dest='debug')
+        self.opt_parser.add_option("--quiet", action='store_true', dest='quiet')
+        self.opt_parser.add_option("--jump-to", action='store', default="", dest='jump_to')
+    
+    def make_opt_epilog(self):
+        return None
         
-    def get_options(self):
-        # TODO: support optparse for more detailed options
+    def get_options(self): 
+        print "GETTING OPTIONS"
         global _verbosity
         self.jump_to = None
-        for a in sys.argv[1:]:
-            if a=='--debug':
-                _verbosity = 2
-                _log("debug enabled")
-            elif a=='--quiet':
-                _verbosity = 0
-            elif a.startswith("--jump-to="):
-                self.jump_to = a.split("=",1)[-1]
-            elif a=='--help':
-                self.help()
-                sys.exit(0)
         
-    def help(self):
-        "This would be help..."
+        self.init_options()
+        
+        options, args = self.opt_parser.parse_args()    
+        
+        if options.debug:
+            _verbosity = 2
+        if options.quiet:
+            _verbosity = 0
+            
+        self.jump_to = options.jump_to
+        return options, args
         
     def first_situation(self):
         return None
