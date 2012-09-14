@@ -93,7 +93,7 @@ def read_playback_events(filename, playback_rate):
 _recording_start_time = None
 _recording_file = None
 def start_recording(filename):
-    global _recording_file, _last_recording_tick
+    global _recording_file, _recording_start_time
     _recording_start_time = time.time()
     _recording_file = open(filename, "w")
     atexit.register(_close_recording)

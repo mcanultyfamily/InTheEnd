@@ -336,15 +336,18 @@ class SituationBase(object):
         _log("%s: %s" % (self.__class__.__name__, msg), verbosity=verbosity)
     
     def get_events(self):
-        if self.g.playback_events:
-            events = []
-            now = time.time()
-            while self.g.playback_events and self.g.playback_events[0][0]<now:
-                tick, event = self.g.playback_events.pop(0)
-                events.append(event)
-            return events
-        else:
-            return pygame.event.get()
+        events = []
+        now = time.time()                    
+        while self.g.playback_events:
+            if self.g.playback_events[0][0]>now:
+                break
+            tick, event = self.g.playback_events.pop(0)
+            events.append(event)
+            if event.type in (pygame.KEYUP,):
+                break
+            if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                break
+        return events+pygame.event.get()
 
     def run(self):
         start = time.time()

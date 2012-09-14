@@ -169,7 +169,7 @@ class QuestionPane(utils.Pane):
         width = self.width-(20+x)
         ignored, rect = self.render_text_wrapped(desc, black_font, x, y, width)
         y += rect[3]
-        y = min(200, y)
+        y = max(200, y)
 
         for id, response, reply in responses:
             if (response):
@@ -418,7 +418,6 @@ _main_situations = ['buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.c
 class MainSituation(QuestionSituation):
     def __init__(self, g, sit=None):
         global _main_situations
-        print "MAIN SIT INIT %r" % sit
         if not sit:
             sit = self.get_next_situation()
         QuestionSituation.__init__(self, g, sit)
@@ -430,8 +429,7 @@ class MainSituation(QuestionSituation):
     def get_next_situation(self):
         global _main_situations
         if _main_situations:
-            sit = _main_situations[0]
-            _main_situations = _main_situations[1:]
+            sit = _main_situations.pop(0)
         else:
             sit = "finalsituation.csv"
         return sit
@@ -459,7 +457,7 @@ class InTheEndGame(utils.GameBase):
     
     def get_options(self):
         options, args = utils.GameBase.get_options(self)
-        if options.randomize_events:
+        if options.randomize_events and not options.playback_from and not options.record_to:
             global _main_situations
             random.shuffle(_main_situations)
             
@@ -479,7 +477,7 @@ class InTheEndGame(utils.GameBase):
         self.quiz_answers.append([q,a])
 
     def first_situation(self):
-        return MainSituation(self)
+        return FirstNewspaperSituation(self)
 
     def _jump_to_situation(self):
         print "_jump_to_situation: %r" % self.jump_to
