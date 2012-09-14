@@ -44,11 +44,7 @@ class SituationBase(utils.SituationBase):
         
         self.panes = {}
         self.panes['CLOCK'] = ClockPane(self)
-        # TODO: create StatusPane()
         self.panes['STATUS'] = utils.Pane(self, 600, 230, 800, 500, (200,180,180))
-        #self.panes['EVENT'] = utils.Pane(self, 0, 0, 400, 500, (180,180,180))
-        #self.panes['MAP'] = utils.Pane(self, 400, 0, 600, 500, (120,180,120))
-        #self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
     
         
         
@@ -134,6 +130,13 @@ class QuestionPane(utils.Pane):
         self.responses = []
         self.answer = None
         
+        self.sit.key_handlers[pygame.K_n] = self._next_key
+        self.sit.key_handlers[pygame.K_RIGHT] = self._next_key
+        self.sit.key_handlers[pygame.K_SPACE] = self._next_key
+        self.sit.key_handlers[pygame.K_a] = self._select_A
+        self.sit.key_handlers[pygame.K_b] = self._select_B
+        self.sit.key_handlers[pygame.K_c] = self._select_C
+
         if self.background:
             self.blit(self.background, (0,0))
         if self.picture:
@@ -213,23 +216,19 @@ class QuestionPane(utils.Pane):
             x = (self.width*2)/3
             y = 400
             self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
-
-    def event_key(self, event):
-        if self.next_button and event.key in (pygame.K_n, pygame.K_RIGHT, pygame.K_SPACE):
+        
+    def _next_key(self, event):
+        if self.next_button:
             self.sit.done = True
-            return True
-        elif event.key==pygame.K_a:
-            self.select(self.responses[0])
-            return True
-        elif event.key==pygame.K_b:
-            self.select(self.responses[1])
-            return True
-        elif event.key==pygame.K_c:
-            self.select(self.responses[2])
-            return True
-        else:
-            return False
-
+            
+    def _select_A(self, event):
+        self.select(self.responses[0])
+        
+    def _select_B(self, event):
+        self.select(self.responses[1])
+        
+    def _select_C(self, event):
+        self.select(self.responses[2])
 
 class QuizSituationBase(SituationBase):
     def __init__(self, g):
@@ -239,9 +238,6 @@ class QuizSituationBase(SituationBase):
         badge = data.load_image("fbi_badge.png")
         self.panes['BADGE'].blit(badge, (0,0))
         self.panes['CLOCK'].set_time("Oct. 3, 2407")
-
-        self.main_pane = self.panes['SURVEY'] = utils.Pane(self, 0, 0, 600, 500, (255, 255, 255))
-        self.main_pane.blit(self.main_pane.background, (0, 0)) 
         
         
 class QuizSituation(QuizSituationBase):
@@ -277,21 +273,13 @@ class QuizSituation(QuizSituationBase):
         else:
             return QuizSummarySituation(self.g)
 
-        
-    def handle_event(self, event):
-        if event.type == pygame.QUIT:
-            self.next_situation_class = None
-            self.done = True
-            utils.python_quit = True
-            self.log("Quit detected in Quiz")
-        elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-            mouse = pygame.mouse.get_pos()
-            self.main_pane.event_click(mouse, event.type==pygame.MOUSEBUTTONUP)
-            # TODO: trigger next situation...
-        elif event.type==pygame.KEYDOWN:
-            self.main_pane.event_key(event)
 
+    def event_key_any(self, event):
+        pass
         
+    def event_click(self, mouse, mouse_up):
+        self.main_pane.event_click(mouse, mouse_up)
+            
     def load_questions(self):
         records = data.read_csv("InterviewQuiz.csv", self.g.game_data)
         QuizSituation.questions = dict([(rec['Number'], rec) for rec in records])
@@ -300,6 +288,7 @@ class QuizSummarySituation(QuizSituationBase):
     def __init__(self, g):
         QuizSituationBase.__init__(self, g)
         
+        self.main_pane = utils.Pane(self, 0, 0, 600, 500, (255,255,255))
         self.main_pane.render_text("This is you:", utils.GameFont("monospace", 30, (0, 0, 0)), 10, 10)        
         FONT_SIZE = 12
         y = 50
@@ -315,22 +304,16 @@ class QuizSummarySituation(QuizSituationBase):
         pygame.display.flip()
 
         self.next_situation_class = FirstMainSituation
-        self.key_down_enabled_after = time.time()+0.2
         self.done = False
 
-        
-    def handle_event(self, event):
-        if event.type == pygame.QUIT:
-            self.next_situation_class = None
-            self.done = True
-        elif event.type==pygame.MOUSEBUTTONUP:
-            mouse = pygame.mouse.get_pos()
-            if self.next_button.mouse_in_rect(mouse):
-                self.done = True
-        elif event.type==pygame.KEYDOWN:
+    
+    def event_click(self, mouse, mouse_up):
+        if mouse_up and self.next_button.mouse_in_rect(mouse):
             self.done = True
     
-
+    def event_key(self, event):
+        self.done = True
+    
 
 
 class QuestionSituation(SituationBase):
@@ -357,7 +340,14 @@ class QuestionSituation(SituationBase):
         self._event_response("B")   
     def event_response_three(self, event):
         self._event_response("C")   
+    
+    def event_click(self, mouse, mouse_up):
+        self.main_pane.event_click(mouse, mouse_up)
+
+    def event_key_any(self, event):
+        pass
         
+
     def _event_response(self, id):
         next_scene = self.curr_scene['%s Next Number' % id]
         if not next_scene or next_scene=='0':
@@ -402,13 +392,12 @@ class InTheEndGame(utils.GameBase):
         pygame.display.set_caption("In the End")
         #self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
         pygame.key.set_repeat(250, 50)
-        self.quiz_answers = []
-        self.quiz_by_q = {}
         self.game_data = {}
+        self.quiz_answers = []
     
     def add_quiz_answer(self, q, a):
-        self.quiz_answers.append([q, a])
-        self.quiz_by_q[q] = a
+        self.game_data[q] = a
+        self.quiz_answers.append([q,a])
 
     def first_situation(self):
         return FirstNewspaperSituation(self)

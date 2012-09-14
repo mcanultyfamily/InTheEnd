@@ -318,22 +318,40 @@ class SituationBase(object):
     
     def still_running(self):
         return not self.done
+    
+    def event_keydown(self, event):
+        if event.key in self.key_handlers:
+            self.consec_keydowns += 1
+            self.key_handlers[event.key](event)
+        else:
+            self.event_key_any(event)
+    
+    def event_keyup(self, event):
+        self.consec_keydowns += 1
+    
+    def event_key_any(self, event):
+        self.done = True
+    
+    def event_click(self, event, mouse_up):
+        self.log("EMPTY EVENT CLICK")
         
     def handle_event(self, event):
         global python_quit
         if event.type == pygame.QUIT:
+            self.log("EVENT: QUIT")
             self.next_situation_class = None
             self.done = True
             python_quit = True
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             mouse = pygame.mouse.get_pos()
+            self.log("EVENT: CLICK - %s" % repr(mouse))
             self.event_click(mouse, event.type==pygame.MOUSEBUTTONUP)
         elif event.type==pygame.KEYDOWN:
-            if event.key in self.key_handlers:
-                self.consec_keydowns += 1
-                self.key_handlers[event.key](event)
+            self.log("EVENT: KEYDOWN - %s" % event.key)
+            self.event_keydown(event)
         elif event.type==pygame.KEYUP:
-            self.consec_keydowns += 1
+            self.log("EVENT: KEYUP - %s" % event.key)
+            self.event_keyup(event)
     
     def do_stuff_before_display(self):
         pass
