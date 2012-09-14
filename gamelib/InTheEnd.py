@@ -167,6 +167,7 @@ class QuestionPane(utils.Pane):
         y += rect[3]
         if (y < 200):
             y = 200        
+        found_response = False;
         for id, response, reply in responses:
             if (response):
                 ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
@@ -174,7 +175,13 @@ class QuestionPane(utils.Pane):
                 ct.id = id
                 self.responses.append(ct)
                 y += ct.rect[3]+5
-        
+                found_response = True;
+        self.NextOnly = False
+        #OK, now I want a Next Button
+        if (found_response == False):
+            self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
+      
+            self.NextOnly = True
         self.text_y = y
         
     def event_click(self, mouse, mouse_up):
@@ -187,6 +194,9 @@ class QuestionPane(utils.Pane):
                 self.next_button.render()
             return True
         
+        # check for fake Next button
+        if (self.NextOnly):
+            return True
         # Check answers
         answer = None
         for ct in self.responses:
@@ -204,6 +214,11 @@ class QuestionPane(utils.Pane):
             return False
             
     def select(self, answer):
+        if (self.NextOnly):
+            self.sit.done = True
+            return
+                    
+            
         if self.answer:
             self.answer.set_font(self.unpressed_font)
             self.answer.render()
@@ -233,13 +248,22 @@ class QuestionPane(utils.Pane):
             self.sit.done = True
             
     def _select_A(self, event):
-        self.select(self.responses[0])
+        if (self.NextOnly):
+            self.select(0)
+        else:
+            self.select(self.responses[0])
         
     def _select_B(self, event):
-        self.select(self.responses[1])
+        if (self.NextOnly):
+            self.select(0)
+        else:
+            self.select(self.responses[1])
         
     def _select_C(self, event):
-        self.select(self.responses[2])
+        if (self.NextOnly):
+            self.select(0)
+        else:
+            self.select(self.responses[2])
 
 class QuizSituationBase(SituationBase):
     def __init__(self, g):
@@ -399,9 +423,22 @@ class FirstMainSituation(QuestionSituation):
         self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
         self.next_situation_class = SecondMainSituation
         
-class SecondMainSituation(SituationBase):
-    pass
-    
+class SecondMainSituation(QuestionSituation):
+    def __init__(self, g):
+        QuestionSituation.__init__(self, g, "religiousnuts.csv")
+        self.FRAME_RATE = 22
+        self.next_situation_class = ThirdMainSituation
+
+class ThirdMainSituation(QuestionSituation):
+    def __init__(self, g):
+        QuestionSituation.__init__(self, g, "motherandchild.csv")
+        self.FRAME_RATE = 22
+        self.next_situation_class = FinalMainSituation
+
+class FinalMainSituation(SituationBase):
+    def __init__(self, g):
+        pass
+
 # TODO: layout blocks...
 
 class InTheEndGame(utils.GameBase):
