@@ -35,7 +35,59 @@ class ClockPane(utils.Pane):
         if ClockPane.clock_ticking:
             time_left = str(ClockPane.endtime-datetime.datetime.now())[:-2]
             self.set_time(time_left)
+ 
+
+class Possesion(object):
+    def __init__(self, image_file, name=None):
+        self.count = 1
+        self.image = data.load_image(image_file)
+        if not name:
+            name = image_file.split(".")[0]
+        self.name = name
         
+    def render(self, g, x, y):
+        if not self.count:
+            return 0, 0
+            
+        g.screen.blit(self.image, (x, y))
+        if self.count!=1:
+            g.render_text(str(self.count), utils.GameFont("monospace", 12, (0,0,0)), x, y)
+        return self.image.get_size()
+        
+class ItemsPane(utils.Pane):
+    def __init__(self, sit):
+        utils.Pane.__init__(self, sit,  600, 230, 800, 500, (200,180,180))   
+        if hasattr(sit, "g"):
+            self.real_g = sit.g      
+        else:
+            self.real_g = g
+        self.render()
+        
+    def add_possession(self, item):
+        self.real_g.add_possession(item)
+        self.render()
+
+    def remove_possession(self, item):
+        self.real_g.remove_possession(item)
+        self.render()
+        
+    def render(self):
+        self.g.screen.blit(self.background, (self.x_offset, self.y_offset))
+        x = 604
+        y = 234
+        max_h = 0
+        for item in self.real_g.possessions:
+            if y>496:
+                print "TOO MANY POSSESSIONS! - can't print %s" % item.name
+                continue
+            w, h = item.render(self.g, x, y)
+            max_h = max(max_h, h)
+            if w:
+                x += w+4
+                if x>796:
+                    x = 604
+                    y += h+4
+                        
 
 class SituationBase(utils.SituationBase):
     def __init__(self, g):
@@ -47,8 +99,8 @@ class SituationBase(utils.SituationBase):
         self.g.screen.blit(self.background, (0, 0)) 
         
         self.panes = {}
-        self.add_pane("CLOCK", ClockPane(self))
-        self.add_pane("STATUS", utils.Pane(self, 600, 230, 800, 500, (200,180,180)))
+        self.clock_pane = self.add_pane("CLOCK", ClockPane(self))
+        self.items_pane = self.add_pane("ITEMS", ItemsPane(self))
         
     def add_pane(self, name, pane):
         pane.name = name
@@ -76,7 +128,7 @@ class SpinImageSituation(SituationBase):
         self.base_center = self.base_image.get_rect().center
         self.main_pane = self.add_pane("PAPER", utils.Pane(self, 0, 0, 600, 500, (255, 255, 255)))
         self.add_pane("MINIMAP", MapPane(self))
-        self.panes['CLOCK'].set_time(time_text)
+        self.clock_pane.set_time(time_text)
         self.current_angle = 0
         self.rotations_left = rotations
         self.need_draw = True
@@ -125,10 +177,12 @@ class SpinImageSituation(SituationBase):
 class FirstNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
         SpinImageSituation.__init__(self, g, "first_news.png", SecondNewspaperSituation, "Sept. 10, 2312")
+        self.g.add_possession(Possesion("first_news_item.png", "First Newspaper"))
         
 class SecondNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
         SpinImageSituation.__init__(self, g, "second_news.png", QuizSituation, "Sept. 19, 2407")
+        #self.g.add_possession(Possesion("second_news_item.png", "Second Newspaper"))
     
 
 
@@ -270,7 +324,7 @@ class QuizSituationBase(SituationBase):
         self.panes['BADGE'] = utils.Pane(self, 600, 30, 800, 230, (255,255,255))
         badge = data.load_image("fbi_badge.png")
         self.panes['BADGE'].blit(badge, (0,0))
-        self.panes['CLOCK'].set_time("Oct. 3, 2407")
+        self.clock_pane.set_time("Oct. 3, 2407")
         
         
 class QuizSituation(QuizSituationBase):
@@ -423,7 +477,7 @@ class MainSituation(QuestionSituation):
         QuestionSituation.__init__(self, g, sit_file)
         self.FRAME_RATE = 22
         
-        self.panes['CLOCK'].start_clock(60*60*2) # 2 hours
+        self.clock_pane.start_clock(60*60*2) # 2 hours
         self.next_situation_class = MainSituation
 
     def get_next_situation(self):
@@ -469,6 +523,21 @@ class InTheEndGame(utils.GameBase):
         self.game_data = {}
         self.quiz_answers = []
         self.possessions = []
+        
+    def add_possession(self, item):
+        if item.name in self.game_data:
+            self.game_data[item.name].count += 1
+        else:
+            self.possessions.append(item)
+            self.game_data[item.name] = item
+    
+    def remove_possession(self, name):
+        item = self.game_data[name]
+        item.count -= 1
+        if not item.count:
+            del self.game_data[name]
+            self.possessions.remove(item)
+        
         
     def init_options(self):
         utils.GameBase.init_options(self)
