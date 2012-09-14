@@ -161,6 +161,7 @@ class QuestionPane(utils.Pane):
             if (response):
                 ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
                 ct.reply = reply
+                ct.id = id
                 self.responses.append(ct)
                 y += ct.rect[3]+5
         
@@ -330,7 +331,7 @@ class QuestionSituation(SituationBase):
         
         self.panes['CLOCK'].clock_ticking = True
         self.panes['MINIMAP'] = utils.Pane(self, 600, 30, 800, 230, (140,180,160))
-
+        
         self.render()
         
 
@@ -342,7 +343,11 @@ class QuestionSituation(SituationBase):
         self._event_response("C")   
     
     def event_click(self, mouse, mouse_up):
+        self.log("QUESTIONSIT - event_click")
         self.main_pane.event_click(mouse, mouse_up)
+        if self.main_pane.answer:
+            NUM_ID_TO_ALPHA_ID = {1:'A', 2:'B', 3:'C'}
+            self._event_response(NUM_ID_TO_ALPHA_ID[self.main_pane.answer.id])
 
     def event_key_any(self, event):
         pass
