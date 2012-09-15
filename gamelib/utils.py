@@ -327,7 +327,7 @@ class SituationBase(object):
         self.FRAME_RATE = 30
         self.next_situation_class = None
         self.done = False
-        self.log("init")
+        self.log("Created")
         self.key_handlers = {}
         self.key_handlers[pygame.K_ESCAPE] = self.event_quit
         self.consec_keydowns = 0
@@ -350,9 +350,10 @@ class SituationBase(object):
         return events+pygame.event.get()
 
     def run(self):
+        global python_quit
         start = time.time()
         ticks = 0
-        while self.still_running():
+        while not python_quit and self.still_running():
             self.g.clock.tick(self.FRAME_RATE)
             ticks += 1
             for event in self.get_events():
@@ -364,8 +365,14 @@ class SituationBase(object):
             self.do_stuff_after_display()
         actual_frame_rate = ticks/(time.time()-start)        
         self.log("Requested frame rate: %0.2f, actual frame rate: %0.2f" % (self.FRAME_RATE, actual_frame_rate))
-        return self.next_situation()
-    
+        if python_quit:
+            self.log("run completing: QUIT")
+            return None
+        else:
+            sit = self.next_situation()
+            self.log("run completing: %s" % sit.__class__.__name__)
+            return sit
+            
     def still_running(self):
         return not self.done
     
@@ -394,13 +401,14 @@ class SituationBase(object):
             self.log("EVENT: CLICK - %s" % repr(mouse))
             self.event_click(mouse, event.type==pygame.MOUSEBUTTONUP)
         elif event.type==pygame.KEYDOWN:
-            self.log("EVENT: KEYDOWN - %s" % event.key)
+            self.log("EVENT: KEYDOWN - %s, %r" % (event.key, event.unicode))
             self.event_keydown(event)
         elif event.type==pygame.KEYUP:
-            self.log("EVENT: KEYUP - %s" % event.key)
+            self.log("EVENT: KEYUP   - %s" % event.key)
             self.event_keyup(event)
 
     def event_quit(self, event):
+        global python_quit
         self.log("EVENT: QUIT")
         self.next_situation_class = None
         self.done = True

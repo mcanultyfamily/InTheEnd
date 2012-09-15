@@ -53,7 +53,9 @@ class Possesion(object):
         if self.count!=1:
             g.render_text(str(self.count), utils.GameFont("monospace", 12, (0,0,0)), x, y)
         return self.image.get_size()
-        
+# TODO - handle move move to hover...
+
+
 class ItemsPane(utils.Pane):
     def __init__(self, sit):
         utils.Pane.__init__(self, sit,  600, 230, 800, 500, (200,180,180))   
@@ -177,6 +179,7 @@ class SpinImageSituation(SituationBase):
 class FirstNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
         SpinImageSituation.__init__(self, g, "first_news.png", SecondNewspaperSituation, "Sept. 10, 2312")
+        self.g.add_possession(Possesion("first_news_item.png", "First Newspaper"))
         self.g.add_possession(Possesion("first_news_item.png", "First Newspaper"))
         
 class SecondNewspaperSituation(SpinImageSituation):
@@ -417,15 +420,14 @@ class QuestionSituation(SituationBase):
         self.FRAME_RATE = 22
         self.log("Reading config %s" % csv_path)
         self.scenes = dict([(rec['Number'], rec) for rec in data.read_csv(csv_path, self.g.game_data)])
-        self.curr_scene = self.scenes['1']
         
         self.key_handlers[pygame.K_1] = self.event_response_one
         self.key_handlers[pygame.K_2] = self.event_response_two
         self.key_handlers[pygame.K_3] = self.event_response_three
         
         self.map_pane = self.add_pane("MINIMAP", MapPane(self))
-        
-        self.render()
+    
+        self.set_current_scene('1')
         
 
     def event_response_one(self, event):
@@ -446,15 +448,20 @@ class QuestionSituation(SituationBase):
         
 
     def _event_response(self, id):
-        next_scene = self.curr_scene['%s Next Number' % id]
-        if not next_scene or next_scene=='0':
+        next_scene = self.curr_scene.get('%s Next Number' % id)
+        self.log("_event_response id: %s, next scene: %s" % (id, next_scene))
+        if not next_scene or next_scene in ['0', '-1']:
             self.done = True
         else:
-            self.curr_scene = self.scenes[next_scene]
-            self.render()
+            self.set_current_scene(next_scene)
+    
+    def set_current_scene(self, scene_id):
+        self.curr_scene = self.scenes[scene_id]
+        if self.curr_scene.get("Item"):
+            self.items_pane.add_possession(self.curr_scene['Item'])
+        self.render()
 
-    def render(self):
-        
+    def render(self):        
         p = QuestionPane(self, 
                           600,
                           None, 
@@ -466,6 +473,7 @@ class QuestionSituation(SituationBase):
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
 
+        
 _main_situations = ['buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
 
 
@@ -474,6 +482,7 @@ class MainSituation(QuestionSituation):
         global _main_situations
         if not sit_file:
             sit_file = get_next_situation_file()
+
         QuestionSituation.__init__(self, g, sit_file)
         self.FRAME_RATE = 22
         
@@ -482,9 +491,34 @@ class MainSituation(QuestionSituation):
 
     def get_next_situation(self):
         return make_main_situation(self.g)
+
+    def next_situation(self):
+        self.log("next_situation: entering")
+        if utils.python_quit:
+            self.log("next_situation: quit")
+            sit = None
+        elif self.curr_scene['A Next Number']=='0':
+            sit = self.special_next_situation(self.curr_scene['B Next Number'])
+            self.log("next_situation: special: %s" % sit)
+        elif self.curr_scene['A Next Number']=='-1':
+            sit = self.game_over()            
+            self.log("next_situation: game over: %s" % sit)
+        else:
+            sit = make_main_situation(self.g)
+            self.log("next_situation: game other: %s" % sit)
+        return sit
+        
+    def special_next_situation(self, id):
+        """ Override this to handle 'special situations' based on responses """
+        return make_main_situation(self.g)
+    
+    def game_over(self):
+        """Override this to handle non-standard game-over paths"""
+        return make_main_situation(self.g, "finalsituation.csv")
+
         
 class MainSituation_buildingonfire(MainSituation):
-    pass
+    pass        
     
 def get_next_situation_file():
     global _main_situations
