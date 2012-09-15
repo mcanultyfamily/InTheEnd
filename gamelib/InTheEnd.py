@@ -15,15 +15,21 @@ class ClockPane(utils.Pane):
     clock_ticking = False
     tick_sound = None
     tick_base_volume = None
+    
     def __init__(self, sit):
         utils.Pane.__init__(self, sit, 600, 0, 800, 30, (0,0,0))   
         self.ticks_to_play = 0
         self.fade_out_ticks = 3
+        self.time_str = ""
         
-        self.time_left 
+
     def set_time(self, time_str):
+        self.time_str = time_str
+        self.render()
+    
+    def render(self):
         self.g.screen.blit(self.background, (self.x_offset, self.y_offset))
-        self.render_text(time_str, utils.GameFont("monospace", 22, (255, 40, 40)), 10, 2)
+        self.render_text(self.time_str, utils.GameFont("monospace", 22, (255, 40, 40)), 10, 2)
     
     def start_clock(self, seconds, restart=False):
         if restart:
@@ -71,14 +77,19 @@ class ClockPane(utils.Pane):
  
 
 class Possesion(object):
-    def __init__(self, image_file, name=None):
+    def __init__(self, image_file, name=None, full_image=None):
         self.count = 1
         self.image = data.load_image(image_file)
+        if full_image:
+            self.full_image = data.load_image(full_image)
+        else:
+            self.full_image = None
+            
         if not name:
             name = image_file.split(".")[0]
         self.name = name
         self.rect = None
-        self.selected = False
+        self.selected = None
         
     def render(self, g, x, y):
         if not self.count:
@@ -94,6 +105,7 @@ class Possesion(object):
             self.rect = self.rect.inflate(BORDER, BORDER)
             pygame.draw.rect(g.screen, (0,255,0), self.rect, BORDER)
         return self.rect[2], self.rect[3]
+    
     
         
 # TODO - handle move move to hover...
@@ -143,17 +155,24 @@ class ItemsPane(utils.Pane):
 
     def event_click(self, mouse, mouse_up):
         need_render = False
-        
+        show_overlay_item = None
+        DOUBLE_CLICK_TIME = 0.1
         for item in self.real_g.possessions:
             if item.rect.collidepoint(mouse):
                 if not item.selected:
-                    item.selected = True
                     need_render = True
+                elif time.time()>(item.selected+DOUBLE_CLICK_TIME):
+                    show_overlay_item = item
+                item.selected = time.time()
             elif item.selected:
                 item.selected = False
                 need_render = True
+        
         if need_render:
             self.render()
+        
+        if show_overlay_item:
+            self.sit.show_overlay(show_overlay_item.full_image)
                 
 class SituationBase(utils.SituationBase):
     def __init__(self, g):
@@ -162,9 +181,9 @@ class SituationBase(utils.SituationBase):
         size = self.g.screen.get_size()
         self.background = pygame.Surface(size).convert()
         self.background.fill((255, 255, 255))
-        self.g.screen.blit(self.background, (0, 0)) 
         
         self.panes = {}
+        self.render()
         self.clock_pane = self.add_pane("CLOCK", ClockPane(self))
         self.items_pane = self.add_pane("ITEMS", ItemsPane(self))
         
@@ -184,7 +203,12 @@ class SituationBase(utils.SituationBase):
     def display(self):
         self.panes['CLOCK'].tick()
         pygame.display.flip()
-
+    
+    def render(self):
+        self.g.screen.blit(self.background, (0, 0)) 
+        for n, p in self.panes.items():
+            p.render()
+        
 class SpinImageSituation(SituationBase):
     def __init__(self, g, image_file, next_situation_class, time_text, spin_rate=100, rotations=2, press_next=True):
         SituationBase.__init__(self, g)
@@ -244,14 +268,17 @@ class SpinImageSituation(SituationBase):
 class FirstNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
         SpinImageSituation.__init__(self, g, "first_news.png", SecondNewspaperSituation, "Sept. 10, 2312")
-        self.g.add_possession(Possesion("first_news_item.png", "First Newspaper"))
-        self.g.add_possession(Possesion("first_news_item.png", "First Newspaper"))
+        self.g.add_possession(Possesion("first_news_item.png", "First Newspaper", full_image="first_news.png"))
         
 class SecondNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
         SpinImageSituation.__init__(self, g, "second_news.png", QuizSituation, "Sept. 19, 2407")
-        #self.g.add_possession(Possesion("second_news_item.png", "Second Newspaper"))
-    
+        self.g.add_possession(Possesion("second_news_item.png", "Second Newspaper", full_image="second_news.png"))
+        
+class EmergencyNewspaperSituation(SpinImageSituation):
+    def __init__(self, g):
+        SpinImageSituation.__init__(self, g, "emergencydeclared.png", MainSituation_apartment, "Dec. 19, 2407")
+        self.g.add_possession(Possesion("emergencydeclared_item.png", "Emergency Declared", full_image="emergencydeclared.png"))
 
 
 class QuestionPane(utils.Pane):
@@ -371,6 +398,9 @@ class QuestionPane(utils.Pane):
             y = 400
             self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
         
+    def render(self):
+        pass
+        
     def _next_key(self, event):
         if self.next_button:
             self.sit.done = True
@@ -395,9 +425,9 @@ class QuizSituationBase(SituationBase):
     def __init__(self, g):
         SituationBase.__init__(self, g)
         self.FRAME_RATE = 5
-        self.panes['BADGE'] = utils.Pane(self, 600, 30, 800, 230, (255,255,255))
         badge = data.load_image("fbi_badge.png")
-        self.panes['BADGE'].blit(badge, (0,0))
+        self.panes['BADGE'] = utils.Pane(self, 600, 30, 800, 230, (255,255,255), background=badge)
+        self.panes['BADGE'].render()
         self.clock_pane.set_time("Oct. 3, 2407")
         
         
@@ -459,7 +489,7 @@ class QuizSummarySituation(QuizSituationBase):
                                        200,y+40)
         pygame.display.flip()
 
-        self.next_situation_class = MainSituation
+        self.next_situation_class = EmergencyNewspaperSituation
         self.done = False
 
     
@@ -594,6 +624,7 @@ class QuestionSituation(SituationBase):
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
 
+
 _main_situations = ['apartment.csv','initialstreet.csv','buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
 
 
@@ -639,6 +670,10 @@ class MainSituation(QuestionSituation):
         return make_main_situation(self.g, "finalsituation.csv")
 
         
+class MainSituation_apartment(MainSituation):
+    def __init__(self, g, sit_file="apartment.csv"):
+        MainSituation.__init__(self, g, sit_file)
+
 class MainSituation_buildingonfire(MainSituation):
     def __init__(self, g, sit_file="buildingonfire.csv"):
         MainSituation.__init__(self, g, sit_file)
@@ -681,6 +716,7 @@ class InTheEndGame(utils.GameBase):
         self.quiz_answers = []
         self.possessions = []
         self.movement_path = []
+    
         
     def add_possession(self, item):
         if item.name in self.game_data:

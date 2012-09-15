@@ -282,7 +282,7 @@ class GameBase(object):
 
 
 class Pane(object):
-    def __init__(self, sit, left, top, right, bottom, color):
+    def __init__(self, sit, left, top, right, bottom, color, background=None):
         self.sit = sit
         _log("NEW PANE %s : %s, %s, %s, %s" % (self.__class__.__name__, left, top, right, bottom), verbosity=2)
         self.g = sit.g
@@ -291,10 +291,16 @@ class Pane(object):
         self.y_offset = top
         self.w = right-left
         self.h = bottom-top
-        self.background = pygame.Surface((self.w, self.h)).convert()
-        self.background.fill(color)
-        self.g.screen.blit(self.background, (left, top)) 
+        if background:
+            self.background = background
+        else:
+            self.background = pygame.Surface((self.w, self.h)).convert()
+            self.background.fill(color)
 
+        
+    def render(self):
+        self.g.screen.blit(self.background, (self.x_offset, self.y_offset)) 
+        
     def render_text(self, text, font, x, y, bg=None):
         return self.g.render_text(text, font, self.x_offset+x, self.y_offset+y)
 
@@ -331,6 +337,7 @@ class SituationBase(object):
         self.key_handlers = {}
         self.key_handlers[pygame.K_ESCAPE] = self.event_quit
         self.consec_keydowns = 0
+        self.showing_overlay = False
         
     def log(self, msg, verbosity=2):
         _log("%s: %s" % (self.__class__.__name__, msg), verbosity=verbosity)
@@ -396,7 +403,12 @@ class SituationBase(object):
         global python_quit
         if event.type == pygame.QUIT:
             self.event_quit(event)
+        elif self.showing_overlay:
+            if event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+                self.hide_overlay()
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            if self.showing_overlay:
+                self.showing_overlay = False
             mouse = pygame.mouse.get_pos()
             self.log("EVENT: CLICK - %s" % repr(mouse))
             self.event_click(mouse, event.type==pygame.MOUSEBUTTONUP)
@@ -429,6 +441,17 @@ class SituationBase(object):
         else:
             return None
 
+    def show_overlay(self, image):
+        self.showing_overlay = True
+        self.g.screen.blit(image, (0, 0))
+    
+    def hide_overlay(self):
+        self.showing_overlay = False
+        self.render()
+        
+    def render(self):
+        pass
+        
 from itertools import chain
  
 def truncline(text, font, maxwidth):
