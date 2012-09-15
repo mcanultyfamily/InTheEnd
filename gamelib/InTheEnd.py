@@ -129,6 +129,7 @@ class ItemsPane(utils.Pane):
         self.render()
         
     def render(self):
+        self.sit.log("RENDER ITEMS PANE")
         self.g.screen.blit(self.background, (self.x_offset, self.y_offset))
         x = 604
         y = 234
@@ -183,9 +184,9 @@ class SituationBase(utils.SituationBase):
         self.background.fill((255, 255, 255))
         
         self.panes = {}
-        self.render()
         self.clock_pane = self.add_pane("CLOCK", ClockPane(self))
         self.items_pane = self.add_pane("ITEMS", ItemsPane(self))
+        self.rendered = False
         
     def add_pane(self, name, pane):
         pane.name = name
@@ -201,10 +202,14 @@ class SituationBase(utils.SituationBase):
                 return
         
     def display(self):
+        if not self.rendered:
+            self.render()
         self.panes['CLOCK'].tick()
         pygame.display.flip()
     
     def render(self):
+        self.log("RENDER Situation Base")
+        self.rendered = True
         self.g.screen.blit(self.background, (0, 0)) 
         for n, p in self.panes.items():
             p.render()
@@ -291,9 +296,41 @@ class QuestionPane(utils.Pane):
         self.desc = desc
         self.show_next = show_next
         self.next_button = None
-        self.responses = []
         self.answer = None
         self.font_size = font_size
+        if text_x:
+            self.text_x = text_x
+            self.text_y = 25
+        elif (width > 500):
+            self.text_x = 150
+            self.text_y = 75
+        else:
+            self.text_x = 10
+            self.text_y = 25
+        
+        self.answer_y = answer_y
+        self.unpressed_font = utils.GameFont("monospace", self.font_size, (0,0,0))
+        self.pressed_font = utils.GameFont("monospace", self.font_size, (30,148,89))
+        
+        self.responses = []
+        x = self.text_x
+        y = self.render_question()
+        width = self.width-(20+x)
+        y = max(self.answer_y, y)
+        for id, response, reply in responses:
+            if response:
+                ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
+                ct.reply = reply
+                ct.id = id
+                self.responses.append(ct)                
+                y += ct.rect[3]+(self.font_size/5)
+        
+        if not self.responses:
+            self.next_y = y
+            self.show_next = True
+            self.create_next_button()
+        else:
+            self.next_y = 400
         
         self.sit.key_handlers[pygame.K_n] = self._next_key
         self.sit.key_handlers[pygame.K_RIGHT] = self._next_key
@@ -302,42 +339,29 @@ class QuestionPane(utils.Pane):
         self.sit.key_handlers[pygame.K_b] = self._select_B
         self.sit.key_handlers[pygame.K_c] = self._select_C
 
+    def render(self):
+        self.sit.log("RENDER QUESTION PANE")
         if self.background:
             self.blit(self.background, (0,0))
         if self.picture:
             self.blit(self.picture, (0, 0))
 
-        black_font = utils.GameFont("monospace", self.font_size, (0,0,0))
-        self.unpressed_font = black_font
-        self.pressed_font = utils.GameFont("monospace", self.font_size, (30,148,89))
-
-        if text_x:
-            self.text_x = text_x
-            y = 25
-        elif (width > 500):
-            self.text_x = 150
-            y = 75
-        else:
-            self.text_x = 10
-            y = 25
-        x = self.text_x
-        width = self.width-(20+x)
-        ignored, rect = self.render_text_wrapped(desc, black_font, x, y, width)
-        y += rect[3]+30
-        y = max(answer_y, y)
-
-        for id, response, reply in responses:
-            if (response):
-                ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
-                ct.reply = reply
-                ct.id = id
-                self.responses.append(ct)
-                y += ct.rect[3]+(self.font_size/5)
-        #OK, now I want a Next Button
-        if not self.responses:
-            self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", self.font_size, (0,0,0)), x, y)
-        self.text_y = y
+        self.render_question()
+    
+        for ct in self.responses:
+            ct.render()
         
+        self.render_reply()
+        
+        if self.next_button:
+            self.next_button.render()
+        
+    def render_question(self):
+        width = self.width-(20+self.text_x)
+        ignored, rect = self.render_text_wrapped(self.desc, self.unpressed_font, self.text_x, self.text_y, width)
+        return self.text_y+rect[3]+30
+        
+
     def event_click(self, mouse, mouse_up):
         self.sit.log("event_click %s - %s [next button %s]" % (mouse, mouse_up, bool(self.next_button)))
         # Handle Next Button
@@ -375,31 +399,37 @@ class QuestionPane(utils.Pane):
                     
             
         if self.answer:
+            # -- Reset the answer text and clear the reply
             self.answer.set_font(self.unpressed_font)
             self.answer.render()
             if self.answer.reply:
                 # TODO - I think this can move into render_text_wrapped(...bg=)
                 area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
                 self.blit(self.background, (self.reply_left, self.reply_top), area=area)
+                self.next_y -= self.reply_height
+                
         self.answer = answer
         self.answer.set_font(self.pressed_font)
         self.answer.render()
-        if answer.reply:
+        self.render_reply()
+        self.create_next_button()
+        
+    def render_reply(self):
+        if self.answer and self.answer.reply:
             mono_font = utils.GameFont("monospace", 20, (153, 128, 18))
-            y = self.text_y+5
+            y = self.next_y
             self.reply_width = self.w - self.text_x - 10
             self.reply_top = y
             self.reply_left = self.text_x
-            ignored, rect = self.render_text_wrapped(answer.reply, mono_font, self.reply_left, self.reply_top, self.reply_width)
+            ignored, rect = self.render_text_wrapped(self.answer.reply, mono_font, self.reply_left, self.reply_top, self.reply_width)
             self.reply_height = rect[3]
+            self.next_y += self.reply_height
 
+    def create_next_button(self):
         if self.show_next and not self.next_button:
             x = (self.width*2)/3
-            y = 400
-            self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
+            self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, self.next_y)
         
-    def render(self):
-        pass
         
     def _next_key(self, event):
         if self.next_button:
@@ -448,8 +478,8 @@ class QuizSituation(QuizSituationBase):
                                       [(c, self.this_rec["Response %s" % c], self.this_rec['Answer to %s' % c]) for c in "ABC"],
                                       show_next=True)
         self.main_pane = self.add_pane("MAIN", p)
+        self.render()
         self.log("Q: %s" % self.this_rec['Question'])
-        pygame.display.flip()
                 
 
     def next_situation(self):
@@ -473,8 +503,14 @@ class QuizSituation(QuizSituationBase):
 class QuizSummarySituation(QuizSituationBase):
     def __init__(self, g):
         QuizSituationBase.__init__(self, g)
+
+        self.next_situation_class = EmergencyNewspaperSituation
         
         self.main_pane = self.add_pane("MAIN", utils.Pane(self, 0, 0, 600, 500, (255,255,255)))
+
+    def render(self):
+        QuizSituationBase.render(self)
+        
         self.main_pane.render_text("This is you:", utils.GameFont("monospace", 30, (0, 0, 0)), 10, 10)        
         FONT_SIZE = 12
         y = 50
@@ -487,10 +523,7 @@ class QuizSummarySituation(QuizSituationBase):
         self.next_button = utils.ClickableText(self.g, "Next",
                                        utils.GameFont("monospace", 20, (0,0,0)), 
                                        200,y+40)
-        pygame.display.flip()
 
-        self.next_situation_class = EmergencyNewspaperSituation
-        self.done = False
 
     
     def event_click(self, mouse, mouse_up):
@@ -540,6 +573,7 @@ class MapPane(utils.Pane):
         self.render()
         
     def render(self):
+        self.sit.log("RENDER MAP PANE")
         self.blit(self.background, (0, 0))
         
         points = [(loc.x+self.x_offset, loc.y+self.y_offset) for loc in self.g.movement_path]
@@ -602,9 +636,6 @@ class QuestionSituation(SituationBase):
             self.items_pane.add_possession(Possesion(self.curr_scene['Item']))
         if self.curr_scene.get("Location"):
             self.map_pane.move_to_location(self.curr_scene['Location'])
-        self.render()
-
-    def render(self):     
         picture_file = self.curr_scene.get("Picture to display")
         if picture_file:
             picture = data.load_image(picture_file)
@@ -621,9 +652,7 @@ class QuestionSituation(SituationBase):
                           font_size=18,
                           answer_y=250)
         self.main_pane = self.add_pane("MAIN", p)                                      
-        self.log("Q: %s" % self.curr_scene['Scenario'])
-        pygame.display.flip()
-
+        self.render()
 
 _main_situations = ['apartment.csv','initialstreet.csv','buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
 
@@ -640,7 +669,7 @@ class MainSituation(QuestionSituation):
         self.clock_pane.start_clock(60*60*2) # 2 hours
         #self.clock_pane.start_sound(10, 5)
         self.next_situation_class = MainSituation
-        
+        self.render()
 
     def get_next_situation(self):
         return make_main_situation(self.g)
