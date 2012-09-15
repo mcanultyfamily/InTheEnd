@@ -14,6 +14,8 @@ class ClockPane(utils.Pane):
     clock_ticking = False
     def __init__(self, sit):
         utils.Pane.__init__(self, sit, 600, 0, 800, 30, (0,0,0))   
+        self.ticks_to_play = 0
+        self.fade_out_ticks = 3
         
     def set_time(self, time_str):
         self.g.screen.blit(self.background, (self.x_offset, self.y_offset))
@@ -25,25 +27,40 @@ class ClockPane(utils.Pane):
             
         if not ClockPane.clock_ticking:
             self.tick_sound = pygame.mixer.Sound("default_cant_move_back.wav")
+            self.tick_base_volume = self.tick_sound.get_volume()
             ClockPane.endtime = datetime.datetime.now()+datetime.timedelta(seconds=seconds)
             ClockPane.clock_ticking = True
             self.time_left = ClockPane.endtime-datetime.datetime.now()
             self.tick()
     
-    def start_sound(self, ticks=3):
-        self.play_ticks = ticks
+    def start_sound(self, ticks=6, fade_out_ticks=3):
+        self.ticks_to_play = ticks
+        self.fade_out_ticks = fade_out_ticks
     
     def stop_sound(self):
-        self.play_ticks = 0
-        
+        self.ticks_to_play = 0
+    
+    def play_tick(self):
+        if self.ticks_to_play:
+            if self.fade_out_ticks:
+                volume = self.tick_base_volume*min(1.0, self.ticks_to_play/(self.fade_out_ticks+1.0))
+            else:
+                volume = self.tick_base_volume
+            print "TICK VOLUME - %s ticks to play, %s fade_out_ticks, %0.4f base vol : %0.4f vol" % (self.ticks_to_play, self.fade_out_ticks, self.tick_base_volume, volume)
+            self.tick_sound.set_volume(volume)
+            self.tick_sound.play()
+            self.ticks_to_play -= 1
+            
+            
     def stop_clock(self):
         ClockPane.clock_ticking = False
         
     def tick(self):
         if ClockPane.clock_ticking:
             time_left = ClockPane.endtime-datetime.datetime.now()
-            if int(time_left.seconds)!=int(self.time_left.seconds):
-                pass #self.tick_sound.play()
+            if self.ticks_to_play and int(time_left.seconds)!=int(self.time_left.seconds):
+                self.play_tick()
+                
             self.time_left = time_left
             time_left = str(time_left)[:-2]
             self.set_time(time_left)
@@ -529,6 +546,7 @@ class MainSituation(QuestionSituation):
         self.FRAME_RATE = 22
         
         self.clock_pane.start_clock(60*60*2) # 2 hours
+        self.clock_pane.start_sound(4)
         self.next_situation_class = MainSituation
 
     def get_next_situation(self):
