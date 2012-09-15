@@ -761,11 +761,12 @@ class MainSituation(QuestionSituation):
         global _main_situations
         if not sit_file:
             sit_file = _main_situations[0]
-        if sit_file in _main_situations:
-            _main_situations.remove(sit_file)
+        while sit_file in _main_situations:
+            _main_situations.pop(0)
 
         QuestionSituation.__init__(self, g, sit_file)
         self.FRAME_RATE = 22
+        self.log("Initialiing mainsituation - sit_file %r" % sit_file)
         
         self.clock_pane.start_clock(60*60*2) # 2 hours
         #self.clock_pane.start_sound(10, 5)
@@ -847,6 +848,7 @@ class MainSituation_spaceportgeneral1(MainSituation):
         MainSituation.__init__(self, g, sit_file)
         global _main_situations
         _main_situations = []
+        
     def special_next_situation(self, value):
         if (self.g.savedPeople):
             return MainSituation_spaceportsavedpeople(self.g)
