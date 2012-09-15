@@ -420,28 +420,33 @@ class QuestionPane(utils.Pane):
             # -- Reset the answer text and clear the reply
             self.answer.set_font(self.unpressed_font)
             self.answer.render()
-            if self.answer.reply:
-                # TODO - I think this can move into render_text_wrapped(...bg=)
-                area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
-                self.blit(self.background, (self.reply_left, self.reply_top), area=area)
-                self.next_y -= self.reply_height
-                
+            self.clear_reply()
+            self.answer = None
+            
         self.answer = answer
         self.answer.set_font(self.pressed_font)
         self.answer.render()
         self.render_reply()
         self.create_next_button()
-        
+
+    def clear_reply(self):
+        if self.answer and self.answer.reply:
+            area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
+            self.blit(self.background, (self.reply_left, self.reply_top), area=area)
+            self.next_y -= self.reply_height
+            self.sit.log("Cleared reply, %s, new next_y: %s" % (area, self.next_y))
+    
     def render_reply(self):
         if self.answer and self.answer.reply:
             mono_font = utils.GameFont("monospace", 20, (153, 128, 18))
-            y = self.next_y
-            self.reply_width = self.w - self.text_x - 10
-            self.reply_top = y
+            self.reply_top = y = self.next_y
+            self.reply_width = self.w - self.text_x - 10            
             self.reply_left = self.text_x
             ignored, rect = self.render_text_wrapped(self.answer.reply, mono_font, self.reply_left, self.reply_top, self.reply_width)
             self.reply_height = rect[3]
+            area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
             self.next_y += self.reply_height
+            self.sit.log("Rendered reply, %s, new next_y: %s" % (rect, self.next_y))
 
     def create_next_button(self):
         if self.show_next and not self.next_button:
