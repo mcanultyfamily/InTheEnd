@@ -847,17 +847,19 @@ class MainSituation_spaceportgeneral1(MainSituation):
     def special_next_situation(self, value):
         if (self.g.savedPeople):
             return MainSituation_spaceportsavedpeople(self.g)
-        elif (self.g.friendsMiddleSchoolers)
+        elif (self.g.friendsMiddleSchoolers):
             return MainSituation_spaceportmiddleschool(self.g)
-        else
+        else:
             return MainSituation(self.g, sit_file="spaceportgeneral2.csv");
 
 class MainSituation_spaceportsavedpeople(MainSituation):
     def __init__(self, g, sit_file="spaceportsavedpeople.csv"):
         MainSituation.__init__(self, g, sit_file)
     def special_next_situation(self, value):
-        #if (self.g.friendsMiddleSchoolers):
-        return MainSituation_spaceportmiddleschool(self.g)
+        if (self.g.friendsMiddleSchoolers):
+            return MainSituation_spaceportmiddleschool(self.g)
+        else:
+            return MainSituation_spaceportmiddleschool(self.g)
 
 class MainSituation_spaceportmiddleschool(MainSituation):
     def __init__(self, g, sit_file="spaceportmiddleschool.csv"):
