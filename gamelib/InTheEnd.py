@@ -355,6 +355,7 @@ class QuestionPane(utils.Pane):
         self.sit.key_handlers[pygame.K_n] = self._next_key
         self.sit.key_handlers[pygame.K_RIGHT] = self._next_key
         self.sit.key_handlers[pygame.K_SPACE] = self._next_key
+        self.sit.key_handlers[pygame.K_RETURN] = self._next_key
         self.sit.key_handlers[pygame.K_a] = self._select_A
         self.sit.key_handlers[pygame.K_b] = self._select_B
         self.sit.key_handlers[pygame.K_c] = self._select_C
