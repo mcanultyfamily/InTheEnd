@@ -654,25 +654,24 @@ class QuestionSituation(SituationBase):
         self.main_pane = self.add_pane("MAIN", p)                                      
         self.render()
 
-_main_situations = ['apartment.csv','initialstreet.csv','buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
+_main_situations = ['apartment.csv','initialstreet.csv','buildingonfire.csv', 
+                    'religiousnuts.csv', 'motherandchild.csv', 
+                    'finalsituation.csv']
 
 
 class MainSituation(QuestionSituation):
     def __init__(self, g, sit_file=None):
         global _main_situations
         if not sit_file:
-            sit_file = get_next_situation_file()
+            sit_file = _main_situations[0]
+        _main_situations.remove(sit_file)
 
         QuestionSituation.__init__(self, g, sit_file)
         self.FRAME_RATE = 22
         
         self.clock_pane.start_clock(60*60*2) # 2 hours
         #self.clock_pane.start_sound(10, 5)
-        self.next_situation_class = MainSituation
         self.render()
-
-    def get_next_situation(self):
-        return make_main_situation(self.g)
 
     def next_situation(self):
         self.log("next_situation: entering")
@@ -686,17 +685,18 @@ class MainSituation(QuestionSituation):
             sit = self.game_over()            
             self.log("next_situation: game over: %s" % sit)
         else:
-            sit = make_main_situation(self.g)
+            global _main_situations
+            sit = _main_situations.pop(0)
             self.log("next_situation: game other: %s" % sit)
         return sit
         
     def special_next_situation(self, id):
         """ Override this to handle 'special situations' based on responses """
-        return make_main_situation(self.g)
+        return MainSituation(self.g)
     
     def game_over(self):
         """Override this to handle non-standard game-over paths"""
-        return make_main_situation(self.g, "finalsituation.csv")
+        return MainSituation(self.g, "finalsituation.csv")
 
         
 class MainSituation_apartment(MainSituation):
@@ -706,29 +706,7 @@ class MainSituation_apartment(MainSituation):
 class MainSituation_buildingonfire(MainSituation):
     def __init__(self, g, sit_file="buildingonfire.csv"):
         MainSituation.__init__(self, g, sit_file)
-    
-def get_next_situation_file():
-    global _main_situations
-    if _main_situations:
-        sit = _main_situations.pop(0)
-    else:
-        sit = "finalsituation.csv"
-    return sit
-
-def make_main_situation(g, sit_file=None):
-    global _main_situations
-    if not sit_file:
-        sit_file = get_next_situation_file()
-    else:
-        _main_situations = [s for s in _main_situations if s!=sit_file]
         
-    class_name = "MainSituation_%s" % sit_file.split(".csv")[0]
-    if class_name in globals():
-        cls = globals()[class_name]
-    else:
-        cls = MainSituation
-    return cls(g, sit_file)
-    
 # TODO: layout blocks...
 
 class InTheEndGame(utils.GameBase):
@@ -791,10 +769,19 @@ class InTheEndGame(utils.GameBase):
         return FirstNewspaperSituation(self)
 
     def _jump_to_situation(self):
+        sit_file = None
         if self.jump_to.endswith(".csv"):
-            sit = make_main_situation(self, sit_file=self.jump_to)
+            cls = "MainSituation_%s" % self.jump_to.split(".csv")[0]
+            if cls in globals():
+                cls = "MainSituation"
+                sit_file = self.jump_to
+            self.jump_to = cls
+        
+        cls = globals[self.jump_to]
+        if sit_file:
+            sit = cls()(self, sit_file=sit_file)
         else:
-            sit = globals()[self.jump_to]()
+            sit = globals()[self.jump_to](self)
         utils._log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, sit.__class__.__name__))
         return sit
         
