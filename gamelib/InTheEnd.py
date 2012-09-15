@@ -772,14 +772,14 @@ class InTheEndGame(utils.GameBase):
         sit_file = None
         if self.jump_to.endswith(".csv"):
             cls = "MainSituation_%s" % self.jump_to.split(".csv")[0]
-            if cls in globals():
+            if not cls in globals():
                 cls = "MainSituation"
                 sit_file = self.jump_to
             self.jump_to = cls
         
-        cls = globals[self.jump_to]
+        cls = globals()[self.jump_to]
         if sit_file:
-            sit = cls()(self, sit_file=sit_file)
+            sit = cls(self, sit_file=sit_file)
         else:
             sit = globals()[self.jump_to](self)
         utils._log("JUMPING TO SITUATION: %s (%s)" % (self.jump_to, sit.__class__.__name__))
