@@ -790,7 +790,7 @@ class MainSituation_apartment(MainSituation):
     def __init__(self, g, sit_file="apartment.csv"):
         MainSituation.__init__(self, g, sit_file, MainSituation_initialstreet)
 
-class MainSituation_apartment(MainSituation):
+class MainSituation_initialstreet(MainSituation):
     def __init__(self, g, sit_file="initialstreet.csv"):
         MainSituation.__init__(self, g, sit_file, MainSituation_buildingonfire)
 
@@ -864,6 +864,8 @@ class MainSituation_spaceportmiddleschool(MainSituation):
     def special_next_situation(self, value):
         return MainSituation_spaceportgeneral2(self.g)
 
+
+SITUATIONS_ORDER = 
 
 # TODO: layout blocks...
 
