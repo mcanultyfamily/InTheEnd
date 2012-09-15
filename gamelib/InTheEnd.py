@@ -513,7 +513,7 @@ class QuestionSituation(SituationBase):
     def set_current_scene(self, scene_id):
         self.curr_scene = self.scenes[scene_id]
         if self.curr_scene.get("Item"):
-            self.items_pane.add_possession(self.curr_scene['Item'])
+            self.items_pane.add_possession(Possesion(self.curr_scene['Item']))
         self.render()
 
     def render(self):     
@@ -546,7 +546,7 @@ class MainSituation(QuestionSituation):
         self.FRAME_RATE = 22
         
         self.clock_pane.start_clock(60*60*2) # 2 hours
-        self.clock_pane.start_sound(4)
+        self.clock_pane.start_sound(6)
         self.next_situation_class = MainSituation
 
     def get_next_situation(self):
