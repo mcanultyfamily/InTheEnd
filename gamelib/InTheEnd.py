@@ -264,7 +264,7 @@ class SpinImageSituation(SituationBase):
             else:
                 self.main_pane.blit(self.base_image, (0,0))
                 self.need_draw = False
-            pygame.display.flip()
+        pygame.display.flip()
 
 
         
@@ -285,11 +285,23 @@ class EmergencyNewspaperSituation(SpinImageSituation):
         self.g.add_possession(Possesion("emergencydeclared_item.png", "Emergency Declared", full_image="emergencydeclared.png"))
 
 
-class InvitationSituation(SituationBase):
+class InvitationSituation(SpinImageSituation):
     def __init__(self, g):
-        SituationBase.__init__(self, g)
-        self.next_situation_class = QuizSituation
-        
+        SpinImageSituation.__init__(self, g, "letterforinterview.png", QuizSituation, "Sept 16, 2407", spin_rate=100, rotations=0)
+        self.g.add_possession(Possesion("letterforinterview_item.png", "Interview Invitation", full_image="letterforinterview.png"))
+
+
+class OpeningCredits(SpinImageSituation):
+    def __init__(self, g):
+        SpinImageSituation.__init__(self, g, "openingcredits.png", FirstNewspaperSituation, "Sept 19, 2407", spin_rate=100, rotations=0)
+
+
+class ClosingCredits(SpinImageSituation):
+    def __init__(self, g):
+        SpinImageSituation.__init__(self, g, "closingcredits.png", None, "Sept 19, 2407", spin_rate=100, rotations=0)
+    
+    def next_situation(self):
+        utils.python_quit = True
     
 class QuestionPane(utils.Pane):
     def __init__(self, sit, width, background, picture, desc, responses, show_next, 
@@ -543,6 +555,18 @@ class TicketNotificationSituation(SituationBase):
     def __init__(self, g):
         SituationBase.__init__(self, g)
         self.next_situation_class = EmergencyNewspaperSituation
+        self.determine_ticket()
+        for k, v in self.g.game_data.items():
+            print "%-30s  : %s" % (k, v)
+            
+    def determine_ticket(self):
+        tickets = [("Shokugak", "Shokugaki (aka Shotgun)"),
+                   ("Mizar3", "Mizar 3 (aka Mystery)"),
+                   ("EndoDelta", "Endo Delta (aka Emotionally Disturbed)"),
+                   ]
+        
+        shortname, fullname = tickets[0]
+        #self.g.add_possession(Possesion("ticket%s_item.png" % shortname, "Ticket to %s" % fullname, full_image="ticket%s.png" % shortname))
         
     
 class MapPane(utils.Pane):
@@ -667,7 +691,7 @@ class QuestionSituation(SituationBase):
 
 _main_situations = ['apartment.csv','initialstreet.csv','buildingonfire.csv', 
                     'religiousnuts.csv', 'motherandchild.csv', 
-                    'finalsituation.csv']
+                    'spaceport.csv']
 
 
 class MainSituation(QuestionSituation):
@@ -685,6 +709,7 @@ class MainSituation(QuestionSituation):
         self.render()
 
     def next_situation(self):
+        global _main_situations
         self.log("next_situation: entering")
         if utils.python_quit:
             self.log("next_situation: quit")
@@ -695,10 +720,10 @@ class MainSituation(QuestionSituation):
         elif self.curr_scene['A Next Number']=='-1':
             sit = self.game_over()            
             self.log("next_situation: game over: %s" % sit)
-        else:
-            global _main_situations
+        elif _main_situations:
             sit = _main_situations.pop(0)
-            self.log("next_situation: game other: %s" % sit)
+        else:
+            sit = ClosingCredits
         return sit
         
     def special_next_situation(self, id):
@@ -751,13 +776,7 @@ class InTheEndGame(utils.GameBase):
             self.possessions.remove(item)
         
         
-    
-    def get_options(self):
-        options, args = utils.GameBase.get_options(self)
-        if options.randomize_events and not options.playback_from and not options.record_to:
-            global _main_situations
-            random.shuffle(_main_situations)
-            
+                
     def make_opt_epilog(self):
         global _main_situations
         situation_jump_tos = "\n".join(["        %s" % jt for jt in _main_situations])
@@ -774,7 +793,7 @@ class InTheEndGame(utils.GameBase):
         self.quiz_answers.append([q,a])
 
     def first_situation(self):
-        return FirstNewspaperSituation(self)
+        return OpeningCredits(self)
 
     def _jump_to_situation(self):
         sit_file = None
