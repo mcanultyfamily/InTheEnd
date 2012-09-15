@@ -122,16 +122,24 @@ class ItemsPane(utils.Pane):
         y = 234
         max_h = 0
         for item in self.real_g.possessions:
-            if y>496:
+            iw, ih = item.image.get_size()
+            bottom = y+ih
+            if bottom>496:
+                print "TOO MANY POSSESSIONS! - can't print %s" % item.name
+                continue
+            right = x+iw
+            if right>796:
+                x = 604
+                y += max_h
+                max_h = 0            
+                bottom = y+ih
+                
+            if bottom>496:
                 print "TOO MANY POSSESSIONS! - can't print %s" % item.name
                 continue
             w, h = item.render(self.g, x, y)
             max_h = max(max_h, h)
-            if w:
-                x += w+4
-                if x>796:
-                    x = 604
-                    y += h+4
+            x += (w+4)
 
     def event_click(self, mouse, mouse_up):
         need_render = False
@@ -466,7 +474,7 @@ class QuizSummarySituation(QuizSituationBase):
 class MapPane(utils.Pane):
     def __init__(self, sit):
         utils.Pane.__init__(self, sit, 600, 30, 800, 230, (140,180,160))
-        self.background = data.load_image("map1.png")
+        self.background = data.load_image("MiniMap.png")
         self.blit(self.background, (0, 0))
     
     def event_click(self, mouse, mouse_up):
@@ -559,6 +567,12 @@ class MainSituation(QuestionSituation):
         self.clock_pane.start_clock(60*60*2) # 2 hours
         self.clock_pane.start_sound(3, 3)
         self.next_situation_class = MainSituation
+        self.items_pane.add_possession(Possesion("foodanddrink.png"))
+        self.items_pane.add_possession(Possesion("knives.png"))
+        self.items_pane.add_possession(Possesion("bathroomstuff.png"))
+        self.items_pane.add_possession(Possesion("tools.png"))
+        self.items_pane.add_possession(Possesion("gadgets.png"))
+        
 
     def get_next_situation(self):
         return make_main_situation(self.g)
