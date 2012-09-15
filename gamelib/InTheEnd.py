@@ -469,6 +469,8 @@ class QuestionPane(utils.Pane):
         self._select(2)
 
 class QuizSituationBase(SituationBase):
+    questions = {}
+    questions_by_q = {}
     def __init__(self, g):
         SituationBase.__init__(self, g)
         self.FRAME_RATE = 5
@@ -476,16 +478,19 @@ class QuizSituationBase(SituationBase):
         self.panes['BADGE'] = utils.Pane(self, 600, 30, 800, 230, (255,255,255), background=badge)
         self.panes['BADGE'].render()
         self.clock_pane.set_time("Oct. 3, 2407")
+        if not QuizSituationBase.questions:
+            self.load_questions()
         
+    def load_questions(self):
+        records = data.read_csv("InterviewQuiz.csv", self.g.game_data)
+        QuizSituationBase.questions = dict([(rec['Number'], rec) for rec in records])
+        QuizSituationBase.questions_by_q = dict([(rec['Question'], rec) for rec in records])
         
 class QuizSituation(QuizSituationBase):
-    questions = {}
     
     def __init__(self, g, q_num='1'):
         QuizSituationBase.__init__(self, g)
-        if not QuizSituation.questions:
-            self.load_questions()
-        self.this_rec = QuizSituation.questions[q_num]
+        self.this_rec = QuizSituationBase.questions[q_num]
         background_image = data.load_image("interview_room2.jpg")
         interviewGuy = pygame.transform.smoothscale(data.load_image("InterviewGuyLarge.png"), (117, 192));
 
@@ -504,7 +509,7 @@ class QuizSituation(QuizSituationBase):
             return None;
         self.g.add_quiz_answer(self.this_rec['Question'], self.main_pane.answer.text)
         q_num = self.this_rec['Next Number']
-        if q_num in QuizSituation.questions:
+        if q_num in QuizSituationBase.questions:
             return QuizSituation(self.g, q_num)
         else:
             return QuizSummarySituation(self.g)
@@ -513,18 +518,43 @@ class QuizSituation(QuizSituationBase):
     def event_key_any(self, event):
         pass
                     
-    def load_questions(self):
-        records = data.read_csv("InterviewQuiz.csv", self.g.game_data)
-        QuizSituation.questions = dict([(rec['Number'], rec) for rec in records])
         
 class QuizSummarySituation(QuizSituationBase):
     def __init__(self, g):
         QuizSituationBase.__init__(self, g)
-
-        self.next_situation_class = TicketNotificationSituation
-        
         self.main_pane = self.add_pane("MAIN", utils.Pane(self, 0, 0, 600, 500, (255,255,255)))
-
+        self.calc_score()
+        
+    def calc_score(self):
+        self.score = 0.0
+        for q, a in self.g.quiz_answers:
+            entry = QuizSituationBase.questions_by_q[q]
+            for c in "ABC":
+                if entry["Response %s" % c]==a:
+                    self.add_score(entry['Score %s' % c])
+                    found = True
+                    break
+                    
+            assert(found)        
+        self.log("QUIZ SCORE: %s" % self.score)
+        self.g.game_data['QUIZ_SCORE'] = self.score
+        
+    def add_score(self, value):
+        before = self.score
+        if value.startswith("div "):
+            val = int(value.replace("div ", "").strip())            
+            self.score = self.score/val
+            self.log("Add score %s/%s -> %s" % (before, val, self.score))
+        elif value.startswith("mult "):
+            val = int(value.replace("mult ", "").strip())
+            self.score = self.score * val
+            self.log("Add score %s * %s -> %s" % (before, val, self.score))
+        else:
+            val = int(value.strip())
+            self.score += val
+            self.log("Add score %s + %s -> %s" % (before, val, self.score))
+            
+        
     def render(self):
         QuizSituationBase.render(self)
         
@@ -543,6 +573,19 @@ class QuizSummarySituation(QuizSituationBase):
 
 
     
+    def next_situation(self):
+        quiz_score = self.g.game_data['QUIZ_SCORE']
+        if quiz_score>15:
+            shortname, fullname = "EndoDelta", "Endo Delta (aka Emotionally Disturbed)"
+        elif quiz_score<-15:
+            shortname, fullnane = "Shokugak", "Shokugaki (aka Shotgun)"
+        else:
+            shortname, fullname = "Mizar3", "Mizar 3 (aka Mystery)"
+            
+        self.g.add_possession(Possesion("ticket%s_item.png" % shortname, "Ticket to %s" % fullname, full_image="ticket%s.png" % shortname))
+        cls = "TicketTo_%s" % shortname
+        return globals()[cls](self.g)
+        
     def event_click(self, mouse, mouse_up):
         if mouse_up and self.next_button.mouse_in_rect(mouse):
             self.done = True
@@ -551,23 +594,20 @@ class QuizSummarySituation(QuizSituationBase):
         self.done = True
     
 
-class TicketNotificationSituation(SituationBase):
-    def __init__(self, g):
-        SituationBase.__init__(self, g)
-        self.next_situation_class = EmergencyNewspaperSituation
-        self.determine_ticket()
-        for k, v in self.g.game_data.items():
-            print "%-30s  : %s" % (k, v)
+class TicketTo_Base(SpinImageSituation):
+    def __init__(self, g, image_name):
+        SpinImageSituation.__init__(self, g, image_name, 
+                                    EmergencyNewspaperSituation, "Oct 1st, 2407", spin_rate=100, rotations=0)
             
-    def determine_ticket(self):
-        tickets = [("Shokugak", "Shokugaki (aka Shotgun)"),
-                   ("Mizar3", "Mizar 3 (aka Mystery)"),
-                   ("EndoDelta", "Endo Delta (aka Emotionally Disturbed)"),
-                   ]
-        
-        shortname, fullname = tickets[0]
-        #self.g.add_possession(Possesion("ticket%s_item.png" % shortname, "Ticket to %s" % fullname, full_image="ticket%s.png" % shortname))
-        
+class TicketTo_Shokugak(TicketTo_Base):
+    def __init__(self, g):
+        TicketTo_Base.__init__(self, g, "ticketShokugak.png")
+class TicketTo_Mizar3(TicketTo_Base):
+    def __init__(self, g):
+        TicketTo_Base.__init__(self, g, "ticketMizar3.png")
+class TicketTo_EndoDelta(TicketTo_Base):
+    def __init__(self, g):
+        TicketTo_Base.__init__(self, g, "ticketEndoDelta.png")
     
 class MapPane(utils.Pane):
     locations = None
