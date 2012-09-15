@@ -171,7 +171,7 @@ class ItemsPane(utils.Pane):
         if need_render:
             self.render()
         
-        if show_overlay_item:
+        if show_overlay_item and not mouse_up:
             self.sit.show_overlay(show_overlay_item.full_image)
                 
 class SituationBase(utils.SituationBase):

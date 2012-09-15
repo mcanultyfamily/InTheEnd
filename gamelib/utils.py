@@ -408,8 +408,6 @@ class SituationBase(object):
             if event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
                 self.hide_overlay()
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-            if self.showing_overlay:
-                self.showing_overlay = False
             mouse = pygame.mouse.get_pos()
             self.log("EVENT: CLICK - %s" % repr(mouse))
             self.event_click(mouse, event.type==pygame.MOUSEBUTTONUP)
