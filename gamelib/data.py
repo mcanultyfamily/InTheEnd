@@ -70,7 +70,7 @@ def read_csv(file_name, slam_data={}):
         reader = csv.reader(f)
         header = reader.next()
         for row in reader:
-            row = [_slam(r, slam_data) for r in row]
+            row = [_slam(r, slam_data).strip() for r in row]            
             rec = dict(map(None, header, row))
             
             records.append(rec)

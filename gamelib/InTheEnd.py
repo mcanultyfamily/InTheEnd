@@ -475,8 +475,22 @@ class MapPane(utils.Pane):
     def __init__(self, sit):
         utils.Pane.__init__(self, sit, 600, 30, 800, 230, (140,180,160))
         self.background = data.load_image("MiniMap.png")
-        self.blit(self.background, (0, 0))
-    
+        class Location(object):
+            def __init__(self, rec):
+                print "REC:", rec
+                self.name = rec['Location']
+                self.x = int(rec['x'])
+                self.y = int(rec['y'])
+                
+        self.locations = {}
+        for rec in data.read_csv("map_locations.csv", self.g.game_data):
+            if rec['Location']:
+                loc = Location(rec)
+                self.locations[loc.name] = loc
+            
+        if not self.g.movement_path:
+            self.move_to_location("Apartment")
+        
     def event_click(self, mouse, mouse_up):
         if self.mouse_in_pane(mouse):
             x, y = self.window_to_pane_xy(mouse[0], mouse[1])
@@ -484,7 +498,31 @@ class MapPane(utils.Pane):
             return True
         else:
             return False
-            
+    
+    def move_to_location(self, loc_name):
+        location = self.locations[loc_name]
+        self.g.movement_path.append(location)
+        self.render()
+        
+    def render(self):
+        print "MapPane render"
+        self.blit(self.background, (0, 0))
+        print self.g.movement_path
+        
+        points = [(loc.x+self.x_offset, loc.y+self.y_offset) for loc in self.g.movement_path]
+        if len(points)>1:
+            closed = False
+            width = 4
+            pygame.draw.lines(self.g.screen, (255,0,0), closed, points, width)
+
+        print points[-1]
+        radius = 4
+        width = 0
+        pygame.draw.circle(self.g.screen, (255,0,0), points[-1], radius, width)            
+        
+        
+        
+        
 class QuestionSituation(SituationBase):
     def __init__(self, g, csv_path):
         SituationBase.__init__(self, g)
@@ -565,7 +603,7 @@ class MainSituation(QuestionSituation):
         self.FRAME_RATE = 22
         
         self.clock_pane.start_clock(60*60*2) # 2 hours
-        self.clock_pane.start_sound(3, 3)
+        self.clock_pane.start_sound(10, 5)
         self.next_situation_class = MainSituation
         
 
@@ -637,6 +675,7 @@ class InTheEndGame(utils.GameBase):
         self.game_data = {}
         self.quiz_answers = []
         self.possessions = []
+        self.movement_path = []
         
     def add_possession(self, item):
         if item.name in self.game_data:
