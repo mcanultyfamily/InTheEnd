@@ -817,7 +817,8 @@ class MainSituation_religiousnuts(MainSituation):
             self.g.friendsMiddleSchoolers = True
         else:
             self.g.friendsMiddleSchoolers = False
-        return MainSituation.special_next_situation(value)
+        self.log("friendsMiddleSchoolers: %s, value: %r"%(self.g.friendsMiddleSchoolers, value))
+        return MainSituation.special_next_situation(self,value)
 
 
 class MainSituation_buildingonfire(MainSituation):
@@ -829,7 +830,8 @@ class MainSituation_buildingonfire(MainSituation):
             self.g.savedPeople = True
         else:
             self.g.savedPeople = False
-        return MainSituation.special_next_situation(value)
+        self.log("savedPeople: %s, value: %r"%(self.g.savedPeople, value))
+        return MainSituation.special_next_situation(self, value)
 
 class MainSituation_motherandchild(MainSituation):
     def __init__(self, g, sit_file="motherandchild.csv"):
@@ -841,7 +843,7 @@ class MainSituation_motherandchild(MainSituation):
             shortname, fullname, get_idx = PLANET_INFO[have_idx]
             return TicketTo_Base(self.g, get_idx, next_situation=MainSituation, time_str=None)
         else:
-            return MainSituation.special_next_situation(value)
+            return MainSituation.special_next_situation(self, value)
                 
 class MainSituation_spaceportgeneral1(MainSituation):
     def __init__(self, g, sit_file="spaceportgeneral1.csv"):
@@ -855,6 +857,7 @@ class MainSituation_spaceportgeneral1(MainSituation):
         elif (self.g.friendsMiddleSchoolers):
             return MainSituation_spaceportmiddleschool(self.g)
         else:
+            self.log("HERE!  I'm HERE!")
             return MainSituation(self.g, sit_file="spaceportgeneral2.csv");
 
 class MainSituation_spaceportsavedpeople(MainSituation):
@@ -892,6 +895,8 @@ class InTheEndGame(utils.GameBase):
         self.quiz_answers = []
         self.possessions = []
         self.movement_path = []
+        self.savedPeople = False
+        self.friendsMiddleSchoolers = False
     
         
     def add_possession(self, item):
