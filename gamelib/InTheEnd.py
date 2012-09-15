@@ -581,10 +581,8 @@ class QuizSummarySituation(QuizSituationBase):
             shortname, fullnane = "Shokugak", "Shokugaki (aka Shotgun)"
         else:
             shortname, fullname = "Mizar3", "Mizar 3 (aka Mystery)"
-            
-        self.g.add_possession(Possesion("ticket%s_item.png" % shortname, "Ticket to %s" % fullname, full_image="ticket%s.png" % shortname))
-        cls = "TicketTo_%s" % shortname
-        return globals()[cls](self.g)
+        
+        return TicketTo_Base(self.g, shortname, fullname)
         
     def event_click(self, mouse, mouse_up):
         if mouse_up and self.next_button.mouse_in_rect(mouse):
@@ -595,19 +593,21 @@ class QuizSummarySituation(QuizSituationBase):
     
 
 class TicketTo_Base(SpinImageSituation):
-    def __init__(self, g, image_name):
-        SpinImageSituation.__init__(self, g, image_name, 
+    def __init__(self, g, shortname, fullname):
+        SpinImageSituation.__init__(self, g, "ticket%s.png" % shortname,
                                     EmergencyNewspaperSituation, "Oct 1st, 2407", spin_rate=100, rotations=0)
+        self.g.add_possession(Possesion("ticket%s_item.png" % shortname, fullname, "ticket%s.png" % shortname))
+        self.g.game_data['HAVE_TICKET_TO'] = fullname
             
 class TicketTo_Shokugak(TicketTo_Base):
     def __init__(self, g):
-        TicketTo_Base.__init__(self, g, "ticketShokugak.png")
+        TicketTo_Base.__init__(self, g, "Shokugak", "Shokugaki (aka Shotgun)")
 class TicketTo_Mizar3(TicketTo_Base):
     def __init__(self, g):
-        TicketTo_Base.__init__(self, g, "ticketMizar3.png")
+        TicketTo_Base.__init__(self, g, "Mizar3", "Mizar 3 (aka Mystery)")
 class TicketTo_EndoDelta(TicketTo_Base):
     def __init__(self, g):
-        TicketTo_Base.__init__(self, g, "ticketEndoDelta.png")
+        TicketTo_Base.__init__(self, g, "EndoDelta", "Endo Delta (aka Emotionally Disturbed)")
     
 class MapPane(utils.Pane):
     locations = None
