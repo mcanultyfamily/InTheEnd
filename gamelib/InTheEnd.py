@@ -865,8 +865,6 @@ class MainSituation_spaceportmiddleschool(MainSituation):
         return MainSituation_spaceportgeneral2(self.g)
 
 
-SITUATIONS_ORDER = 
-
 # TODO: layout blocks...
 
 class InTheEndGame(utils.GameBase):
