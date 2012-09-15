@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import time
 import datetime
-import random
 import pygame
 import utils
 import data
@@ -740,9 +739,6 @@ class InTheEndGame(utils.GameBase):
             self.possessions.remove(item)
         
         
-    def init_options(self):
-        utils.GameBase.init_options(self)
-        self.opt_parser.add_option("--no-random", action='store_false', dest='randomize_events')
     
     def get_options(self):
         options, args = utils.GameBase.get_options(self)
@@ -752,7 +748,7 @@ class InTheEndGame(utils.GameBase):
             
     def make_opt_epilog(self):
         global _main_situations
-        situation_jump_tos = "\n".join(["        %s" % jt for jt in _main_situations+['finalsituation.csv']])
+        situation_jump_tos = "\n".join(["        %s" % jt for jt in _main_situations])
         return """
     Valid Jump-Tos Are:
         FirstNewspaperSituation

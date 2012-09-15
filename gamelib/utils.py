@@ -204,7 +204,6 @@ class GameBase(object):
                 return self.epilog
     
         self.opt_parser = MyParser(epilog=self.make_opt_epilog())
-        self.opt_parser.add_option("--verbosity", action='store', type=int, default=1, dest='verbosity', help='0=quiet, 1=normal, 2=verbose, 3=debug')
         self.opt_parser.add_option("--debug", action='store_true', dest='debug')
         self.opt_parser.add_option("--quiet", action='store_true', dest='quiet')
         self.opt_parser.add_option("--jump-to", action='store', default="", dest='jump_to')
