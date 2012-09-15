@@ -779,7 +779,7 @@ class MainSituation(QuestionSituation):
     
     def special_next_situation(self, id):
         """ Override this to handle 'special situations' based on responses """
-        return self.next_available_main()
+        return self.next_situation_class(self.g)
     
     def game_over(self):
         """Override this to handle non-standard game-over paths"""
@@ -832,12 +832,12 @@ class MainSituation_motherandchild(MainSituation):
             return MainSituation.special_next_situation(self, value)
 
 class MainSituation_spaceportgeneral2(MainSituation):
-    def __init__(self, g, sit_file="spaceportgeneral1.csv"):
+    def __init__(self, g, sit_file="spaceportgeneral2.csv"):
         MainSituation.__init__(self, g, sit_file, ClosingCredits)
                 
 class MainSituation_spaceportgeneral1(MainSituation):
     def __init__(self, g, sit_file="spaceportgeneral1.csv"):
-        MainSituation.__init__(self, g, sit_file)
+        MainSituation.__init__(self, g, sit_file, MainSituation_spaceportgeneral2)
         
     def special_next_situation(self, value):
         if (self.g.savedPeople):
@@ -850,7 +850,7 @@ class MainSituation_spaceportgeneral1(MainSituation):
 
 class MainSituation_spaceportsavedpeople(MainSituation):
     def __init__(self, g, sit_file="spaceportsavedpeople.csv"):
-        MainSituation.__init__(self, g, sit_file)
+        MainSituation.__init__(self, g, sit_file, MainSituation_spaceportgeneral2)
     def special_next_situation(self, value):
         if (self.g.friendsMiddleSchoolers):
             return MainSituation_spaceportmiddleschool(self.g)
@@ -859,7 +859,7 @@ class MainSituation_spaceportsavedpeople(MainSituation):
 
 class MainSituation_spaceportmiddleschool(MainSituation):
     def __init__(self, g, sit_file="spaceportmiddleschool.csv"):
-        MainSituation.__init__(self, g, sit_file)
+        MainSituation.__init__(self, g, sit_file, MainSituation_spaceportgeneral2)
         
     def special_next_situation(self, value):
         return MainSituation_spaceportgeneral2(self.g)
