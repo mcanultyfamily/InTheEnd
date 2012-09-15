@@ -753,7 +753,7 @@ class QuestionSituation(SituationBase):
 
 _main_situations = ['apartment.csv','initialstreet.csv','buildingonfire.csv', 
                     'religiousnuts.csv', 'motherandchild.csv', 
-                    'spaceport.csv']
+                    'spaceportgeneral1.csv']
 
 
 class MainSituation(QuestionSituation):
@@ -761,7 +761,8 @@ class MainSituation(QuestionSituation):
         global _main_situations
         if not sit_file:
             sit_file = _main_situations[0]
-        _main_situations.remove(sit_file)
+        if sit_file in _main_situations:
+            _main_situations.remove(sit_file)
 
         QuestionSituation.__init__(self, g, sit_file)
         self.FRAME_RATE = 22
@@ -822,7 +823,27 @@ class MainSituation_motherandchild(MainSituation):
         else:
             return MainSituation.special_next_situation(value)
                 
-            
+class MainSituation_spaceportgeneral1(MainSituation):
+    def __init__(self, g, sit_file="spaceportgeneral1.csv"):
+        MainSituation.__init__(self, g, sit_file)
+        global _main_situations
+        _main_situations = []
+    def special_next_situation(self, value):
+        return MainSituation_spaceportsavedpeople(self.g)
+
+class MainSituation_spaceportsavedpeople(MainSituation):
+    def __init__(self, g, sit_file="spaceportsavedpeople.csv"):
+        MainSituation.__init__(self, g, sit_file)
+    def special_next_situation(self, value):
+        return MainSituation_spaceportmiddleschool(self.g)
+
+class MainSituation_spaceportmiddleschool(MainSituation):
+    def __init__(self, g, sit_file="spaceportmiddleschool.csv"):
+        MainSituation.__init__(self, g, sit_file)
+    def special_next_situation(self, value):
+        return MainSituation(self.g, sit_file="spaceportgeneral2.csv");
+
+
 # TODO: layout blocks...
 
 class InTheEndGame(utils.GameBase):
