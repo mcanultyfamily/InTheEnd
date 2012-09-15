@@ -804,9 +804,28 @@ class MainSituation_apartment(MainSituation):
     def __init__(self, g, sit_file="apartment.csv"):
         MainSituation.__init__(self, g, sit_file)
 
+class MainSituation_religiousnuts(MainSituation):
+    def __init__(self, g, sit_file="religiousnuts.csv"):
+        MainSituation.__init__(self, g, sit_file)
+    
+    def special_next_situation(self, value):
+        if value =='2':
+            self.g.friendsMiddleSchoolers = True
+        else:
+            self.g.friendsMiddleSchoolers = False
+        return MainSituation.special_next_situation(value)
+
+
 class MainSituation_buildingonfire(MainSituation):
     def __init__(self, g, sit_file="buildingonfire.csv"):
         MainSituation.__init__(self, g, sit_file)
+
+    def special_next_situation(self, value):
+        if value !='0':
+            self.g.savedPeople = True
+        else:
+            self.g.savedPeople = False
+        return MainSituation.special_next_situation(value)
 
 class MainSituation_motherandchild(MainSituation):
     def __init__(self, g, sit_file="motherandchild.csv"):
@@ -826,12 +845,18 @@ class MainSituation_spaceportgeneral1(MainSituation):
         global _main_situations
         _main_situations = []
     def special_next_situation(self, value):
-        return MainSituation_spaceportsavedpeople(self.g)
+        if (self.g.savedPeople):
+            return MainSituation_spaceportsavedpeople(self.g)
+        elif (self.g.friendsMiddleSchoolers)
+            return MainSituation_spaceportmiddleschool(self.g)
+        else
+            return MainSituation(self.g, sit_file="spaceportgeneral2.csv");
 
 class MainSituation_spaceportsavedpeople(MainSituation):
     def __init__(self, g, sit_file="spaceportsavedpeople.csv"):
         MainSituation.__init__(self, g, sit_file)
     def special_next_situation(self, value):
+        #if (self.g.friendsMiddleSchoolers):
         return MainSituation_spaceportmiddleschool(self.g)
 
 class MainSituation_spaceportmiddleschool(MainSituation):
