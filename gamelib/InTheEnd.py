@@ -337,6 +337,7 @@ class QuestionPane(utils.Pane):
         width = self.width-(20+x)
         y = max(self.answer_y, y)
         for id, response, reply in responses:
+            response = response.strip()
             if response:
                 ct = utils.ClickableText(self, response, self.unpressed_font,  x, y, id, width)
                 ct.reply = reply
@@ -693,9 +694,7 @@ class QuestionSituation(SituationBase):
         self.log("Reading config %s" % csv_path)
         self.scenes = dict([(rec['Number'], rec) for rec in data.read_csv(csv_path, self.g.game_data)])
         
-        self.key_handlers[pygame.K_1] = self.event_response_one
-        self.key_handlers[pygame.K_2] = self.event_response_two
-        self.key_handlers[pygame.K_3] = self.event_response_three
+
         
         self.map_pane = self.add_pane("MINIMAP", MapPane(self))
     
@@ -738,12 +737,26 @@ class QuestionSituation(SituationBase):
             picture = data.load_image(picture_file)
         else:
             picture = None
+
+        special_a_number = self.curr_scene['A Next Number'] 
+        if not special_a_number or special_a_number in ['0','-1']:
+            responses = []
+            for k in [pygame.K_1, pygame.K_2, pygame.K_3]:
+                if k in self.key_handlers:
+                    del self.key_handlers[k]
+        
+        else:
+            responses = [(idx+1, self.curr_scene["Response %s" % c].strip(), "") for idx, c in enumerate("ABC")]
+            self.key_handlers[pygame.K_1] = self.event_response_one
+            self.key_handlers[pygame.K_2] = self.event_response_two
+            self.key_handlers[pygame.K_3] = self.event_response_three
+
         p = QuestionPane(self, 
                           600,
                           None, 
                           picture,
                           self.curr_scene['Scenario'],
-                          [(idx+1, self.curr_scene["Response %s" % c], "") for idx, c in enumerate("ABC")],
+                          responses,
                           show_next=False,
                           text_x = 20,
                           font_size=18,
