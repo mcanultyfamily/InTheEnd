@@ -478,7 +478,6 @@ class MapPane(utils.Pane):
         self.background = data.load_image("MiniMap.png")
         class Location(object):
             def __init__(self, rec):
-                print "REC:", rec
                 self.name = rec['Location']
                 self.x = int(rec['x'])
                 self.y = int(rec['y'])
@@ -503,23 +502,23 @@ class MapPane(utils.Pane):
             return False
     
     def move_to_location(self, loc_name):
+        if self.g.movement_path and \
+           self.g.movement_path[-1].name==loc_name:
+           return
         location = MapPane.locations[loc_name]
         self.g.movement_path.append(location)
         self.render()
         
     def render(self):
-        print "MapPane render"
         self.blit(self.background, (0, 0))
-        print self.g.movement_path
         
         points = [(loc.x+self.x_offset, loc.y+self.y_offset) for loc in self.g.movement_path]
         if len(points)>1:
             closed = False
-            width = 4
+            width = 6
             pygame.draw.lines(self.g.screen, (255,0,0), closed, points, width)
 
-        print points[-1]
-        radius = 4
+        radius = 6
         width = 0
         pygame.draw.circle(self.g.screen, (255,0,0), points[-1], radius, width)            
         
@@ -595,7 +594,7 @@ class QuestionSituation(SituationBase):
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
 
-_main_situations = ['apartment.csv','buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
+_main_situations = ['apartment.csv','initialstreet.csv','buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
 
 
 class MainSituation(QuestionSituation):
