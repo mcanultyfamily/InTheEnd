@@ -472,6 +472,7 @@ class QuizSummarySituation(QuizSituationBase):
     
 
 class MapPane(utils.Pane):
+    locations = None
     def __init__(self, sit):
         utils.Pane.__init__(self, sit, 600, 30, 800, 230, (140,180,160))
         self.background = data.load_image("MiniMap.png")
@@ -481,16 +482,18 @@ class MapPane(utils.Pane):
                 self.name = rec['Location']
                 self.x = int(rec['x'])
                 self.y = int(rec['y'])
-                
-        self.locations = {}
-        for rec in data.read_csv("map_locations.csv", self.g.game_data):
-            if rec['Location']:
-                loc = Location(rec)
-                self.locations[loc.name] = loc
+        if not MapPane.locations:
+            MapPane.locations = {}
+            for rec in data.read_csv("map_locations.csv", self.g.game_data):
+                if rec['Location']:
+                    loc = Location(rec)
+                    MapPane.locations[loc.name] = loc
             
         if not self.g.movement_path:
             self.move_to_location("Apartment")
-        
+        else:
+            self.render()
+            
     def event_click(self, mouse, mouse_up):
         if self.mouse_in_pane(mouse):
             x, y = self.window_to_pane_xy(mouse[0], mouse[1])
@@ -500,7 +503,7 @@ class MapPane(utils.Pane):
             return False
     
     def move_to_location(self, loc_name):
-        location = self.locations[loc_name]
+        location = MapPane.locations[loc_name]
         self.g.movement_path.append(location)
         self.render()
         
@@ -568,6 +571,8 @@ class QuestionSituation(SituationBase):
         self.curr_scene = self.scenes[scene_id]
         if self.curr_scene.get("Item"):
             self.items_pane.add_possession(Possesion(self.curr_scene['Item']))
+        if self.curr_scene.get("Location"):
+            self.map_pane.move_to_location(self.curr_scene['Location'])
         self.render()
 
     def render(self):     
@@ -603,7 +608,7 @@ class MainSituation(QuestionSituation):
         self.FRAME_RATE = 22
         
         self.clock_pane.start_clock(60*60*2) # 2 hours
-        self.clock_pane.start_sound(10, 5)
+        #self.clock_pane.start_sound(10, 5)
         self.next_situation_class = MainSituation
         
 
@@ -636,7 +641,8 @@ class MainSituation(QuestionSituation):
 
         
 class MainSituation_buildingonfire(MainSituation):
-    pass        
+    def __init__(self, g, sit_file="buildingonfire.csv"):
+        MainSituation.__init__(self, g, sit_file)
     
 def get_next_situation_file():
     global _main_situations
