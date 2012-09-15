@@ -24,16 +24,28 @@ class ClockPane(utils.Pane):
             ClockPane.clock_ticking = False
             
         if not ClockPane.clock_ticking:
+            self.tick_sound = pygame.mixer.Sound("default_cant_move_back.wav")
             ClockPane.endtime = datetime.datetime.now()+datetime.timedelta(seconds=seconds)
             ClockPane.clock_ticking = True
+            self.time_left = ClockPane.endtime-datetime.datetime.now()
             self.tick()
     
+    def start_sound(self, ticks=3):
+        self.play_ticks = ticks
+    
+    def stop_sound(self):
+        self.play_ticks = 0
+        
     def stop_clock(self):
         ClockPane.clock_ticking = False
         
     def tick(self):
         if ClockPane.clock_ticking:
-            time_left = str(ClockPane.endtime-datetime.datetime.now())[:-2]
+            time_left = ClockPane.endtime-datetime.datetime.now()
+            if int(time_left.seconds)!=int(self.time_left.seconds):
+                pass #self.tick_sound.play()
+            self.time_left = time_left
+            time_left = str(time_left)[:-2]
             self.set_time(time_left)
  
 
@@ -237,7 +249,7 @@ class QuestionPane(utils.Pane):
         if self.background:
             self.blit(self.background, (0,0))
         if self.picture:
-            self.blit(self.picture, (10,10))
+            self.blit(self.picture, (0, 0))
 
         black_font = utils.GameFont("monospace", 20, (0,0,0))
         self.unpressed_font = black_font
@@ -487,11 +499,16 @@ class QuestionSituation(SituationBase):
             self.items_pane.add_possession(self.curr_scene['Item'])
         self.render()
 
-    def render(self):        
+    def render(self):     
+        picture_file = self.curr_scene.get("Picture to display")
+        if picture_file:
+            picture = data.load_image(picture_file)
+        else:
+            picture = None
         p = QuestionPane(self, 
                           600,
                           None, 
-                          self.curr_scene.get("Picture to display"),
+                          picture,
                           self.curr_scene['Scenario'],
                           [(idx+1, self.curr_scene["Response %s" % c], "") for idx, c in enumerate("ABC")],
                           show_next=False)
