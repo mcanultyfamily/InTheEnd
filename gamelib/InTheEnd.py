@@ -223,7 +223,8 @@ class SpinImageSituation(SituationBase):
         self.base_center = self.base_image.get_rect().center
         self.main_pane = self.add_pane("PAPER", utils.Pane(self, 0, 0, 600, 500, (255, 255, 255)))
         self.add_pane("MINIMAP", MapPane(self))
-        self.clock_pane.set_time(time_text)
+        if time_text:
+            self.clock_pane.set_time(time_text)
         self.current_angle = 0
         self.rotations_left = rotations
         self.need_draw = True
@@ -597,13 +598,17 @@ class QuizSummarySituation(QuizSituationBase):
     def event_key(self, event):
         self.done = True
     
-
+class Ticket(Possesion):
+    def __init__(self, shortname, fullname):
+        Possesion.__init__(self, "ticket%s_item.png" % shortname, fullname, "ticket%s.png" % shortname)
+        
 class TicketTo_Base(SpinImageSituation):
-    def __init__(self, g, idx):
+    def __init__(self, g, idx, next_situation=EmergencyNewspaperSituation, time_str="Oct 1st, 2407"):
         shortname, fullname, other_idx = PLANET_INFO[idx]
         SpinImageSituation.__init__(self, g, "ticket%s.png" % shortname,
-                                    EmergencyNewspaperSituation, "Oct 1st, 2407", spin_rate=100, rotations=0)
-        self.g.add_possession(Possesion("ticket%s_item.png" % shortname, fullname, "ticket%s.png" % shortname))
+                                    next_situation, time_str, spin_rate=100, rotations=0)
+        self.g.add_possession(Ticket(shortname, fullname))
+        self.g.game_data['HAVE_TICKET_IDX'] = idx
         self.g.game_data['HAVE_TICKET_TO'] = fullname
         self.g.game_data['DONT_HAVE_TICKET_TO'] = PLANET_INFO[other_idx][1]
         
@@ -758,7 +763,6 @@ class MainSituation(QuestionSituation):
         self.render()
 
     def next_situation(self):
-        global _main_situations
         self.log("next_situation: entering")
         if utils.python_quit:
             self.log("next_situation: quit")
@@ -769,15 +773,21 @@ class MainSituation(QuestionSituation):
         elif self.curr_scene['A Next Number']=='-1':
             sit = self.game_over()            
             self.log("next_situation: game over: %s" % sit)
-        elif _main_situations:
-            sit = _main_situations.pop(0)
         else:
-            sit = ClosingCredits
+            sit = self.next_available_main()
+        return sit
+    
+    def next_available_main(self):
+        global _main_situations
+        if _main_situations:
+            sit = MainSituation(self.g, sit_file=_main_situations.pop(0))
+        else:
+            sit = ClosingCredits(self.g)
         return sit
         
     def special_next_situation(self, id):
         """ Override this to handle 'special situations' based on responses """
-        return MainSituation(self.g)
+        return self.next_available_main()
     
     def game_over(self):
         """Override this to handle non-standard game-over paths"""
@@ -791,7 +801,20 @@ class MainSituation_apartment(MainSituation):
 class MainSituation_buildingonfire(MainSituation):
     def __init__(self, g, sit_file="buildingonfire.csv"):
         MainSituation.__init__(self, g, sit_file)
+
+class MainSituation_motherandchild(MainSituation):
+    def __init__(self, g, sit_file="motherandchild.csv"):
+        MainSituation.__init__(self, g, sit_file)
         
+    def special_next_situation(self, value):
+        if value=='3':
+            have_idx = self.g.game_data['HAVE_TICKET_IDX']
+            shortname, fullname, get_idx = PLANET_INFO[have_idx]
+            return TicketTo_Base(self.g, get_idx, next_situation=MainSituation, time_str=None)
+        else:
+            return MainSituation.special_next_situation(value)
+                
+            
 # TODO: layout blocks...
 
 class InTheEndGame(utils.GameBase):
@@ -805,6 +828,7 @@ class InTheEndGame(utils.GameBase):
         #self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
         pygame.key.set_repeat(250, 50)
         self.game_data = {}
+        self.game_data['HAVE_TICKET_IDX'] = 0
         self.game_data['HAVE_TICKET_TO'] = 'TEST HAVE PLANET'
         self.game_data['DONT_HAVE_TICKET_TO'] = "TEST OTHER PLANET"
         self.quiz_answers = []
