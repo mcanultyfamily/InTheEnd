@@ -443,9 +443,12 @@ class SituationBase(object):
             return None
 
     def show_overlay(self, image):
-        self.showing_overlay = True
-        self.g.screen.blit(image, (0, 0))
-    
+        if image:
+            self.showing_overlay = True
+            self.g.screen.blit(image, (0, 0))
+        else:
+            self.showing_overlay = True
+            
     def hide_overlay(self):
         self.showing_overlay = False
         self.render()
