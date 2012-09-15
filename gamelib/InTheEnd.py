@@ -827,7 +827,7 @@ class MainSituation_motherandchild(MainSituation):
         if value=='3':
             have_idx = self.g.game_data['HAVE_TICKET_IDX']
             shortname, fullname, get_idx = PLANET_INFO[have_idx]
-            return TicketTo_Base(self.g, get_idx, next_situation=MainSituation, time_str=None)
+            return TicketTo_Base(self.g, get_idx, next_situation=self.next_situation_class, time_str=None)
         else:
             return MainSituation.special_next_situation(self, value)
 
