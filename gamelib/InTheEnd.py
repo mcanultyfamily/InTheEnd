@@ -44,6 +44,8 @@ class Possesion(object):
         if not name:
             name = image_file.split(".")[0]
         self.name = name
+        self.rect = None
+        self.selected = False
         
     def render(self, g, x, y):
         if not self.count:
@@ -52,7 +54,15 @@ class Possesion(object):
         g.screen.blit(self.image, (x, y))
         if self.count!=1:
             g.render_text(str(self.count), utils.GameFont("monospace", 12, (0,0,0)), x, y)
-        return self.image.get_size()
+        self.rect = self.image.get_rect().move(x, y)
+        
+        if self.selected:
+            BORDER = 4
+            self.rect = self.rect.inflate(BORDER, BORDER)
+            pygame.draw.rect(g.screen, (0,255,0), self.rect, BORDER)
+        return self.rect[2], self.rect[3]
+    
+        
 # TODO - handle move move to hover...
 
 
@@ -89,8 +99,23 @@ class ItemsPane(utils.Pane):
                 if x>796:
                     x = 604
                     y += h+4
-                        
 
+    def event_click(self, mouse, mouse_up):
+        print "itemspane: event_click: %s, %s" % mouse
+        need_render = False
+        
+        for item in self.real_g.possessions:
+            print "item %s rect: %s" % (item.name, item.rect)
+            if item.rect.collidepoint(mouse):
+                if not item.selected:
+                    item.selected = True
+                    need_render = True
+            elif item.selected:
+                item.selected = False
+                need_render = True
+        if need_render:
+            self.render()
+                
 class SituationBase(utils.SituationBase):
     def __init__(self, g):
         utils.SituationBase.__init__(self, g)
@@ -112,8 +137,9 @@ class SituationBase(utils.SituationBase):
     def event_click(self, mouse, mouse_up):
         self.log("SITUATION BASE EVENT CLICK")
         for n, p in self.panes.items():
-            self.log("EVENT CLICK? : %s" % n)
-            if p.event_click(mouse, mouse_up):
+            if p.rect.collidepoint(mouse):
+                self.log("EVENT CLICK : %s" % n)
+                p.event_click(mouse, mouse_up)
                 return
         
     def display(self):
@@ -465,7 +491,7 @@ class QuestionSituation(SituationBase):
         p = QuestionPane(self, 
                           600,
                           None, 
-                          None,
+                          self.curr_scene.get("Picture to display"),
                           self.curr_scene['Scenario'],
                           [(idx+1, self.curr_scene["Response %s" % c], "") for idx, c in enumerate("ABC")],
                           show_next=False)

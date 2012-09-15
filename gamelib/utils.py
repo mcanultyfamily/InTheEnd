@@ -287,6 +287,7 @@ class Pane(object):
         self.sit = sit
         _log("NEW PANE %s : %s, %s, %s, %s" % (self.__class__.__name__, left, top, right, bottom), verbosity=2)
         self.g = sit.g
+        self.rect = pygame.Rect(left, top, right, bottom)
         self.x_offset = left
         self.y_offset = top
         self.w = right-left
