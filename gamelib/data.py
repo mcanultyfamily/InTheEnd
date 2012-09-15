@@ -59,7 +59,9 @@ def read_csv(file_name, slam_data={}):
             if pieces:
                 key, end = p.split("}}")
                 key = key.strip()
-                p = "%s%s" % (slam_data.get(key, ""), end)                
+                val = slam_data.get(key, "")
+                #print "SLAM: %r -> %r" % (key, val)
+                p = "%s%s" % (val, end)                
             pieces.append(p)
         return ''.join(pieces)
         

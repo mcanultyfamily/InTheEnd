@@ -519,6 +519,12 @@ class QuizSituation(QuizSituationBase):
         pass
                     
         
+PLANET_INFO = [
+    ["EndoDelta", "Endo Delta (aka Emotionally Disturbed)", 1],
+    ["Shokugak", "Shokugaki (aka Shotgun)", 2],
+    ["Mizar3", "Mizar 3 (aka Mystery)", 0],
+]
+
 class QuizSummarySituation(QuizSituationBase):
     def __init__(self, g):
         QuizSituationBase.__init__(self, g)
@@ -576,13 +582,13 @@ class QuizSummarySituation(QuizSituationBase):
     def next_situation(self):
         quiz_score = self.g.game_data['QUIZ_SCORE']
         if quiz_score>15:
-            shortname, fullname = "EndoDelta", "Endo Delta (aka Emotionally Disturbed)"
+            idx = 0
         elif quiz_score<-15:
-            shortname, fullnane = "Shokugak", "Shokugaki (aka Shotgun)"
+            idx = 1
         else:
-            shortname, fullname = "Mizar3", "Mizar 3 (aka Mystery)"
-        
-        return TicketTo_Base(self.g, shortname, fullname)
+            idx = 2
+            
+        return TicketTo_Base(self.g, idx)
         
     def event_click(self, mouse, mouse_up):
         if mouse_up and self.next_button.mouse_in_rect(mouse):
@@ -593,21 +599,24 @@ class QuizSummarySituation(QuizSituationBase):
     
 
 class TicketTo_Base(SpinImageSituation):
-    def __init__(self, g, shortname, fullname):
+    def __init__(self, g, idx):
+        shortname, fullname, other_idx = PLANET_INFO[idx]
         SpinImageSituation.__init__(self, g, "ticket%s.png" % shortname,
                                     EmergencyNewspaperSituation, "Oct 1st, 2407", spin_rate=100, rotations=0)
         self.g.add_possession(Possesion("ticket%s_item.png" % shortname, fullname, "ticket%s.png" % shortname))
         self.g.game_data['HAVE_TICKET_TO'] = fullname
-            
-class TicketTo_Shokugak(TicketTo_Base):
-    def __init__(self, g):
-        TicketTo_Base.__init__(self, g, "Shokugak", "Shokugaki (aka Shotgun)")
-class TicketTo_Mizar3(TicketTo_Base):
-    def __init__(self, g):
-        TicketTo_Base.__init__(self, g, "Mizar3", "Mizar 3 (aka Mystery)")
+        self.g.game_data['DONT_HAVE_TICKET_TO'] = PLANET_INFO[other_idx][1]
+        
+    
 class TicketTo_EndoDelta(TicketTo_Base):
     def __init__(self, g):
-        TicketTo_Base.__init__(self, g, "EndoDelta", "Endo Delta (aka Emotionally Disturbed)")
+        TicketTo_Base.__init__(self, g, 0)
+class TicketTo_Shokugak(TicketTo_Base):
+    def __init__(self, g):
+        TicketTo_Base.__init__(self, g, 1)
+class TicketTo_Mizar3(TicketTo_Base):
+    def __init__(self, g):
+        TicketTo_Base.__init__(self, g, 2)
     
 class MapPane(utils.Pane):
     locations = None
@@ -796,6 +805,8 @@ class InTheEndGame(utils.GameBase):
         #self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
         pygame.key.set_repeat(250, 50)
         self.game_data = {}
+        self.game_data['HAVE_TICKET_TO'] = 'TEST HAVE PLANET'
+        self.game_data['DONT_HAVE_TICKET_TO'] = "TEST OTHER PLANET"
         self.quiz_answers = []
         self.possessions = []
         self.movement_path = []
