@@ -307,8 +307,9 @@ class ClosingCredits(SpinImageSituation):
 class QuestionPane(utils.Pane):
     def __init__(self, sit, width, background, picture, desc, responses, show_next, 
                   text_x=None, font_size=20, answer_y=200):
-        utils.Pane.__init__(self, sit, 0, 0, width, 500, (250,250,250))   
-        self.background = background
+        utils.Pane.__init__(self, sit, 0, 0, width, 500, (250,250,250)) 
+        if background:
+            self.background = background
         self.width = width
         self.picture = picture
         self.desc = desc
@@ -432,6 +433,7 @@ class QuestionPane(utils.Pane):
     def clear_reply(self):
         if self.answer and self.answer.reply:
             area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
+            self.blit(self.sit.background, (self.reply_left, self.reply_top), area=area)
             self.blit(self.background, (self.reply_left, self.reply_top), area=area)
             self.next_y -= self.reply_height
             self.sit.log("Cleared reply, %s, new next_y: %s" % (area, self.next_y))
@@ -443,6 +445,7 @@ class QuestionPane(utils.Pane):
             self.reply_width = self.w - self.text_x - 10            
             self.reply_left = self.text_x
             ignored, rect = self.render_text_wrapped(self.answer.reply, mono_font, self.reply_left, self.reply_top, self.reply_width)
+            
             self.reply_height = rect[3]
             area = pygame.Rect(self.reply_left, self.reply_top, self.reply_width, self.reply_height)
             self.next_y += self.reply_height

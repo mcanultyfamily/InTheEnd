@@ -316,6 +316,8 @@ class Pane(object):
         _log("PANE BLIT: %s, %s" % (topleft, area), verbosity=3)
         x, y = topleft
         x, y = self.pane_to_window_xy(x, y)
+        if area:
+            area.topleft = self.pane_to_window_xy(x, y)
         self.g.screen.blit(img, (x, y), area=area)
 
     def event_click(self, mouse, mouse_up):
