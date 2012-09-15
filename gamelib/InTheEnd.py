@@ -547,7 +547,7 @@ class QuestionSituation(SituationBase):
                           show_next=False,
                           text_x = 20,
                           font_size=18,
-                          answer_y=300)
+                          answer_y=250)
         self.main_pane = self.add_pane("MAIN", p)                                      
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
@@ -567,11 +567,6 @@ class MainSituation(QuestionSituation):
         self.clock_pane.start_clock(60*60*2) # 2 hours
         self.clock_pane.start_sound(3, 3)
         self.next_situation_class = MainSituation
-        self.items_pane.add_possession(Possesion("foodanddrink.png"))
-        self.items_pane.add_possession(Possesion("knives.png"))
-        self.items_pane.add_possession(Possesion("bathroomstuff.png"))
-        self.items_pane.add_possession(Possesion("tools.png"))
-        self.items_pane.add_possession(Possesion("gadgets.png"))
         
 
     def get_next_situation(self):
