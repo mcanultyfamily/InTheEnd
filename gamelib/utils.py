@@ -216,7 +216,6 @@ class GameBase(object):
         return None
         
     def get_options(self): 
-        print "GETTING OPTIONS"
         global _verbosity
         self.jump_to = None
         

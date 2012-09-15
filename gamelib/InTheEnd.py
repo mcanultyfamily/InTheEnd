@@ -46,7 +46,7 @@ class ClockPane(utils.Pane):
                 volume = self.tick_base_volume*min(1.0, self.ticks_to_play/(self.fade_out_ticks+1.0))
             else:
                 volume = self.tick_base_volume
-            print "TICK VOLUME - %s ticks to play, %s fade_out_ticks, %0.4f base vol : %0.4f vol" % (self.ticks_to_play, self.fade_out_ticks, self.tick_base_volume, volume)
+            #print "TICK VOLUME - %s ticks to play, %s fade_out_ticks, %0.4f base vol : %0.4f vol" % (self.ticks_to_play, self.fade_out_ticks, self.tick_base_volume, volume)
             self.tick_sound.set_volume(volume)
             self.tick_sound.play()
             self.ticks_to_play -= 1
@@ -130,11 +130,9 @@ class ItemsPane(utils.Pane):
                     y += h+4
 
     def event_click(self, mouse, mouse_up):
-        print "itemspane: event_click: %s, %s" % mouse
         need_render = False
         
         for item in self.real_g.possessions:
-            print "item %s rect: %s" % (item.name, item.rect)
             if item.rect.collidepoint(mouse):
                 if not item.selected:
                     item.selected = True
@@ -662,7 +660,6 @@ class InTheEndGame(utils.GameBase):
         return FirstNewspaperSituation(self)
 
     def _jump_to_situation(self):
-        print "_jump_to_situation: %r" % self.jump_to
         if self.jump_to.endswith(".csv"):
             sit = make_main_situation(self, sit_file=self.jump_to)
         else:
