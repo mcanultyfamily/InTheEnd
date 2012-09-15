@@ -499,12 +499,7 @@ class QuestionSituation(SituationBase):
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
 
-<<<<<<< HEAD
-        
-_main_situations = ['buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
-=======
 _main_situations = ['apartment.csv','buildingonfire.csv', 'religiousnuts.csv', 'motherandchild.csv']
->>>>>>> background pics for apartment; adding apartment
 
 
 class MainSituation(QuestionSituation):
