@@ -11,12 +11,16 @@ WINDOW_HEIGHT = 500
 
 class ClockPane(utils.Pane):
     end_time = None # End-Time survives multiple ClockPanes...
+    time_left = None
     clock_ticking = False
+    tick_sound = None
+    tick_base_volume = None
     def __init__(self, sit):
         utils.Pane.__init__(self, sit, 600, 0, 800, 30, (0,0,0))   
         self.ticks_to_play = 0
         self.fade_out_ticks = 3
         
+        self.time_left 
     def set_time(self, time_str):
         self.g.screen.blit(self.background, (self.x_offset, self.y_offset))
         self.render_text(time_str, utils.GameFont("monospace", 22, (255, 40, 40)), 10, 2)
@@ -26,11 +30,11 @@ class ClockPane(utils.Pane):
             ClockPane.clock_ticking = False
             
         if not ClockPane.clock_ticking:
-            self.tick_sound = pygame.mixer.Sound("default_cant_move_back.wav")
-            self.tick_base_volume = self.tick_sound.get_volume()
+            ClockPane.tick_sound = pygame.mixer.Sound("default_cant_move_back.wav")
+            ClockPane.tick_base_volume = ClockPane.tick_sound.get_volume()
             ClockPane.endtime = datetime.datetime.now()+datetime.timedelta(seconds=seconds)
             ClockPane.clock_ticking = True
-            self.time_left = ClockPane.endtime-datetime.datetime.now()
+            ClockPane.time_left = ClockPane.endtime-datetime.datetime.now()
             self.tick()
     
     def start_sound(self, ticks=6, fade_out_ticks=3):
@@ -43,12 +47,12 @@ class ClockPane(utils.Pane):
     def play_tick(self):
         if self.ticks_to_play:
             if self.fade_out_ticks:
-                volume = self.tick_base_volume*min(1.0, self.ticks_to_play/(self.fade_out_ticks+1.0))
+                volume = ClockPane.tick_base_volume*min(1.0, self.ticks_to_play/(self.fade_out_ticks+1.0))
             else:
-                volume = self.tick_base_volume
+                volume = ClockPane.tick_base_volume
             #print "TICK VOLUME - %s ticks to play, %s fade_out_ticks, %0.4f base vol : %0.4f vol" % (self.ticks_to_play, self.fade_out_ticks, self.tick_base_volume, volume)
-            self.tick_sound.set_volume(volume)
-            self.tick_sound.play()
+            ClockPane.tick_sound.set_volume(volume)
+            ClockPane.tick_sound.play()
             self.ticks_to_play -= 1
             
             
@@ -58,10 +62,10 @@ class ClockPane(utils.Pane):
     def tick(self):
         if ClockPane.clock_ticking:
             time_left = ClockPane.endtime-datetime.datetime.now()
-            if self.ticks_to_play and int(time_left.seconds)!=int(self.time_left.seconds):
+            if self.ticks_to_play and int(time_left.seconds)!=int(ClockPane.time_left.seconds):
                 self.play_tick()
                 
-            self.time_left = time_left
+            ClockPane.time_left = time_left
             time_left = str(time_left)[:-2]
             self.set_time(time_left)
  
@@ -243,7 +247,8 @@ class SecondNewspaperSituation(SpinImageSituation):
 
 
 class QuestionPane(utils.Pane):
-    def __init__(self, sit, width, background, picture, desc, responses, show_next):
+    def __init__(self, sit, width, background, picture, desc, responses, show_next, 
+                  text_x=None, font_size=20, answer_y=200):
         utils.Pane.__init__(self, sit, 0, 0, width, 500, (250,250,250))   
         self.background = background
         self.width = width
@@ -253,6 +258,7 @@ class QuestionPane(utils.Pane):
         self.next_button = None
         self.responses = []
         self.answer = None
+        self.font_size = font_size
         
         self.sit.key_handlers[pygame.K_n] = self._next_key
         self.sit.key_handlers[pygame.K_RIGHT] = self._next_key
@@ -266,20 +272,24 @@ class QuestionPane(utils.Pane):
         if self.picture:
             self.blit(self.picture, (0, 0))
 
-        black_font = utils.GameFont("monospace", 20, (0,0,0))
+        black_font = utils.GameFont("monospace", self.font_size, (0,0,0))
         self.unpressed_font = black_font
-        self.pressed_font = utils.GameFont("monospace", 20, (30,148,89))
+        self.pressed_font = utils.GameFont("monospace", self.font_size, (30,148,89))
 
-        if (width > 500):
-            self.text_x = x = 150
+        if text_x:
+            self.text_x = text_x
+            y = 25
+        elif (width > 500):
+            self.text_x = 150
             y = 75
         else:
-            self.text_x = x = 10
+            self.text_x = 10
             y = 25
+        x = self.text_x
         width = self.width-(20+x)
         ignored, rect = self.render_text_wrapped(desc, black_font, x, y, width)
-        y += rect[3]
-        y = max(200, y)
+        y += rect[3]+30
+        y = max(answer_y, y)
 
         for id, response, reply in responses:
             if (response):
@@ -287,10 +297,10 @@ class QuestionPane(utils.Pane):
                 ct.reply = reply
                 ct.id = id
                 self.responses.append(ct)
-                y += ct.rect[3]+5
+                y += ct.rect[3]+(self.font_size/5)
         #OK, now I want a Next Button
         if not self.responses:
-            self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", 20, (0,0,0)), x, y)
+            self.next_button = utils.ClickableText(self, "Next", utils.GameFont("monospace", self.font_size, (0,0,0)), x, y)
         self.text_y = y
         
     def event_click(self, mouse, mouse_up):
@@ -299,7 +309,7 @@ class QuestionPane(utils.Pane):
         if self.next_button and self.next_button.mouse_in_rect(mouse):
             if mouse_up:
                 self.sit.done = True
-            elif self.next_button.set_font(utils.GameFont("monospace", 20, (80,80,80))):
+            elif self.next_button.set_font(utils.GameFont("monospace", self.font_size, (80,80,80))):
                 self.next_button.render()
             return True
         
@@ -526,7 +536,10 @@ class QuestionSituation(SituationBase):
                           picture,
                           self.curr_scene['Scenario'],
                           [(idx+1, self.curr_scene["Response %s" % c], "") for idx, c in enumerate("ABC")],
-                          show_next=False)
+                          show_next=False,
+                          text_x = 20,
+                          font_size=18,
+                          answer_y=300)
         self.main_pane = self.add_pane("MAIN", p)                                      
         self.log("Q: %s" % self.curr_scene['Scenario'])
         pygame.display.flip()
@@ -544,7 +557,7 @@ class MainSituation(QuestionSituation):
         self.FRAME_RATE = 22
         
         self.clock_pane.start_clock(60*60*2) # 2 hours
-        self.clock_pane.start_sound(6)
+        self.clock_pane.start_sound(3, 3)
         self.next_situation_class = MainSituation
 
     def get_next_situation(self):
