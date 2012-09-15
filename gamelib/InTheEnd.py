@@ -864,7 +864,7 @@ class MainSituation_spaceportsavedpeople(MainSituation):
         if (self.g.friendsMiddleSchoolers):
             return MainSituation_spaceportmiddleschool(self.g)
         else:
-            return MainSituation_spaceportmiddleschool(self.g)
+            return MainSituation(self.g, sit_file="spaceportgeneral2.csv");
 
 class MainSituation_spaceportmiddleschool(MainSituation):
     def __init__(self, g, sit_file="spaceportmiddleschool.csv"):
