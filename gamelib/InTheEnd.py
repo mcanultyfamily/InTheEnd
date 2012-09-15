@@ -276,7 +276,7 @@ class FirstNewspaperSituation(SpinImageSituation):
         
 class SecondNewspaperSituation(SpinImageSituation):
     def __init__(self, g):
-        SpinImageSituation.__init__(self, g, "second_news.png", QuizSituation, "Sept. 19, 2407")
+        SpinImageSituation.__init__(self, g, "second_news.png", InvitationSituation, "Sept. 19, 2407")
         self.g.add_possession(Possesion("second_news_item.png", "Second Newspaper", full_image="second_news.png"))
         
 class EmergencyNewspaperSituation(SpinImageSituation):
@@ -285,6 +285,12 @@ class EmergencyNewspaperSituation(SpinImageSituation):
         self.g.add_possession(Possesion("emergencydeclared_item.png", "Emergency Declared", full_image="emergencydeclared.png"))
 
 
+class InvitationSituation(SituationBase):
+    def __init__(self, g):
+        SituationBase.__init__(self, g)
+        self.next_situation_class = QuizSituation
+        
+    
 class QuestionPane(utils.Pane):
     def __init__(self, sit, width, background, picture, desc, responses, show_next, 
                   text_x=None, font_size=20, answer_y=200):
@@ -503,7 +509,7 @@ class QuizSummarySituation(QuizSituationBase):
     def __init__(self, g):
         QuizSituationBase.__init__(self, g)
 
-        self.next_situation_class = EmergencyNewspaperSituation
+        self.next_situation_class = TicketNotificationSituation
         
         self.main_pane = self.add_pane("MAIN", utils.Pane(self, 0, 0, 600, 500, (255,255,255)))
 
@@ -533,6 +539,12 @@ class QuizSummarySituation(QuizSituationBase):
         self.done = True
     
 
+class TicketNotificationSituation(SituationBase):
+    def __init__(self, g):
+        SituationBase.__init__(self, g)
+        self.next_situation_class = EmergencyNewspaperSituation
+        
+    
 class MapPane(utils.Pane):
     locations = None
     def __init__(self, sit):
